@@ -107,6 +107,25 @@ button.person:hover:not(:disabled) {
   font-weight: 600;
 }
 
+/* Avisos del backoffice que llegan por el socket */
+.notices {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #eef0fb;
+}
+
+.notices-list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
 .chat-error,
 .room-warning {
   margin: 0;

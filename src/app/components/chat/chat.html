@@ -48,6 +48,20 @@
     </ul>
   </section>
 
+  <!-- Avisos del backoffice: llegan por el mismo socket, con los eventos books:changed y
+       authors:changed. No son mensajes del chat: los emite el servidor a todos los conectados
+       cuando un admin crea, edita o borra algo -->
+  @if (notices().length > 0) {
+    <section class="notices" aria-labelledby="notices-title">
+      <h2 id="notices-title" class="people-title">Avisos del backoffice</h2>
+      <ul class="notices-list" aria-live="polite">
+        @for (notice of notices(); track $index) {
+          <li>{{ noticeText(notice) }}</li>
+        }
+      </ul>
+    </section>
+  }
+
   @if (error()) {
     <p class="chat-error" role="alert">{{ error() }}</p>
   }

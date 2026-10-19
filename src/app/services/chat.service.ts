@@ -23,6 +23,20 @@ export interface ChatError {
   message: string;
 }
 
+// Aviso del backoffice (eventos books:changed y authors:changed): no es chat, es el servidor
+// avisando a todos los conectados de que un admin ha creado, editado o borrado algo
+export interface BackofficeChange {
+  action: 'created' | 'updated' | 'deleted';
+  id: string;
+  name: string;
+  userId: string;
+}
+
+// El mismo aviso con el tipo de dato, para pintar "Libro" o "Autor"
+export interface BackofficeNotice extends BackofficeChange {
+  kind: 'book' | 'author';
+}
+
 // Mensaje con el que el backend rechaza la conexión si el token falta, es falso o ha caducado
 const AUTH_ERROR = 'Authentication error';
 
@@ -65,6 +79,10 @@ export class ChatService {
   // Errores funcionales enviados por el backend (por ejemplo, sala no válida).
   private readonly chatErrorSubject = new Subject<ChatError>();
   readonly chatError$ = this.chatErrorSubject.asObservable();
+
+  // Avisos del backoffice: los dos eventos (libros y autores) salen por el mismo Observable
+  private readonly backofficeSubject = new Subject<BackofficeNotice>();
+  readonly backofficeChanges$ = this.backofficeSubject.asObservable();
 
   getUsers(): Observable<ChatUser[]> {
     // El interceptor HTTP añade el access token a esta petición protegida.
@@ -134,6 +152,15 @@ export class ChatService {
 
     this.socket.on('chat:error', (error: ChatError) => {
       this.chatErrorSubject.next(error);
+    });
+
+    // Eventos que no son del chat: el servidor los emite a todos cuando cambia el backoffice
+    this.socket.on('books:changed', (change: BackofficeChange) => {
+      this.backofficeSubject.next({ ...change, kind: 'book' });
+    });
+
+    this.socket.on('authors:changed', (change: BackofficeChange) => {
+      this.backofficeSubject.next({ ...change, kind: 'author' });
     });
 
     // Inicia la conexión después de configurar sus eventos.

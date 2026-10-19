@@ -1,8 +1,18 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
-import { ChatError, ChatMessage, ChatService, ChatUser } from '../../services/chat.service';
+import {
+  BackofficeNotice,
+  ChatError,
+  ChatMessage,
+  ChatService,
+  ChatUser,
+} from '../../services/chat.service';
 import { Chat } from './chat';
 
 // ChatService falso: el componente se prueba sin servidor de sockets.
@@ -14,6 +24,7 @@ class FakeChatService {
   messages$ = new Subject<ChatMessage>();
   chatError$ = new Subject<ChatError>();
   onlineUsers$ = new BehaviorSubject<string[]>([]);
+  backofficeChanges$ = new Subject<BackofficeNotice>();
   users: ChatUser[] = [
     { _id: 'b-user', name: 'Usuario' },
     { _id: 'a-admin', name: 'Admin' },
@@ -40,25 +51,32 @@ describe('Chat', () => {
   let chat: FakeChatService;
 
   beforeEach(async () => {
-    localStorage.clear();
-    // Sesión del admin, cuyo id es a-admin
-    localStorage.setItem(
-      'user',
-      JSON.stringify({ _id: 'a-admin', name: 'Admin', email: 'a@b.c', role: 'admin' }),
-    );
     chat = new FakeChatService();
 
     await TestBed.configureTestingModule({
       imports: [Chat],
-      providers: [{ provide: ChatService, useValue: chat }, AuthService],
+      providers: [
+        { provide: ChatService, useValue: chat },
+        AuthService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
     }).compileComponents();
+
+    // Sesión del admin, cuyo id es a-admin (con un login simulado: ya no hay nada en localStorage)
+    TestBed.inject(AuthService).login({ email: 'a@b.c', password: 'seminari7' }).subscribe();
+    TestBed.inject(HttpTestingController)
+      .expectOne(`${environment.apiUrl}/auth/login`)
+      .flush({
+        token: 't',
+        user: { _id: 'a-admin', name: 'Admin', email: 'a@b.c', role: 'admin' },
+      });
 
     fixture = TestBed.createComponent(Chat);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
-
-  afterEach(() => localStorage.clear());
 
   it('connects on start and joins the general room once connected', () => {
     expect(chat.connect).toHaveBeenCalled();
@@ -94,6 +112,28 @@ describe('Chat', () => {
     chat.chatError$.next({ message: 'No puedes entrar en esta sala.' });
 
     expect(component.error()).toBe('No puedes entrar en esta sala.');
+  });
+
+  it('shows the backoffice notices, the newest first and at most five', () => {
+    const notice = (name: string): BackofficeNotice => ({
+      kind: 'book',
+      action: 'created',
+      id: name,
+      name,
+      userId: 'a-admin',
+    });
+    ['uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis'].forEach((n) =>
+      chat.backofficeChanges$.next(notice(n)),
+    );
+
+    expect(component.notices().map((n) => n.name)).toEqual([
+      'seis',
+      'cinco',
+      'cuatro',
+      'tres',
+      'dos',
+    ]);
+    expect(component.noticeText(notice('Dune'))).toBe('Libro creado: Dune');
   });
 
   it('disconnects the socket when leaving the page', () => {

@@ -13,9 +13,21 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
-import { ChatMessage, ChatService, ChatUser } from '../../services/chat.service';
+import { BackofficeNotice, ChatMessage, ChatService, ChatUser } from '../../services/chat.service';
 
 type ChatLevel = 'general' | 'group' | 'direct';
+
+// Cuántos avisos del backoffice se enseñan
+const MAX_NOTICES = 5;
+
+// Texto de cada aviso, por ejemplo "Libro creado: Dune"
+const NOTICE_LABELS = {
+  book: 'Libro',
+  author: 'Autor',
+  created: 'creado',
+  updated: 'editado',
+  deleted: 'borrado',
+} as const;
 
 // Un usuario de la lista, con su estado de conexión
 export interface ChatPerson extends ChatUser {
@@ -44,6 +56,9 @@ export class Chat implements OnInit, OnDestroy {
   readonly error = signal('');
   readonly activeRoom = signal('general');
   readonly onlineIds = signal<string[]>([]);
+
+  // Los últimos avisos del backoffice que han llegado por el socket (el más nuevo primero)
+  readonly notices = signal<BackofficeNotice[]>([]);
 
   // El usuario con sesión, para mostrarlo el primero de la lista como "tú"
   readonly me = this.authService.user;
@@ -102,6 +117,13 @@ export class Chat implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.chatService.chatError$.subscribe((error) => {
         this.error.set(error.message);
+      }),
+    );
+
+    // Avisos del backoffice: me quedo con los 5 últimos, el más reciente arriba
+    this.subscriptions.add(
+      this.chatService.backofficeChanges$.subscribe((notice) => {
+        this.notices.update((notices) => [notice, ...notices].slice(0, MAX_NOTICES));
       }),
     );
 
@@ -187,6 +209,11 @@ export class Chat implements OnInit, OnDestroy {
     } catch (error: unknown) {
       this.error.set(error instanceof Error ? error.message : 'No se pudo enviar el mensaje.');
     }
+  }
+
+  // "Libro creado: Dune" o "Autor borrado: Borges"
+  noticeText(notice: BackofficeNotice): string {
+    return `${NOTICE_LABELS[notice.kind]} ${NOTICE_LABELS[notice.action]}: ${notice.name}`;
   }
 
   ngOnDestroy(): void {

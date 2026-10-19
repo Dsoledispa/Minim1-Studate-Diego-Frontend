@@ -13,7 +13,6 @@ describe('ChatService', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
-    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
@@ -21,10 +20,7 @@ describe('ChatService', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => {
-    httpMock.verify();
-    localStorage.clear();
-  });
+  afterEach(() => httpMock.verify());
 
   it('getUsers() returns the users of GET /users', () => {
     let names: string[] = [];
