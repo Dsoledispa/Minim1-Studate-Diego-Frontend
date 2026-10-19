@@ -16,11 +16,13 @@ function withToken(request: HttpRequest<unknown>, token: string): HttpRequest<un
 // Un interceptor se ejecuta en TODAS las peticiones de HttpClient, entre el servicio y la red.
 // Este hace dos cosas, para que ningún servicio tenga que preocuparse del token:
 //   1. Añade la cabecera Authorization: Bearer <token>.
-//   2. Si la API responde 401 porque el token ha caducado, pide uno nuevo con el refresh token
-//      y repite la petición. Si no se puede renovar, cierra la sesión (lleva al login).
+//   2. Si la API responde 401 porque el token ha caducado, pide uno nuevo a /auth/refresh (el
+//      refresh token va en la cookie HttpOnly) y repite la petición. Si no se puede renovar,
+//      cierra la sesión (lleva al login).
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
-  // Las rutas de /auth no llevan token: login y register son públicas y refresh manda el suyo
-  // en el body. Además, así un 401 del login (contraseña mala) no cierra ninguna sesión.
+  // Las rutas de /auth no llevan token: login y register son públicas, y refresh y logout se
+  // identifican con la cookie. Además, así un 401 del login (contraseña mala) o del refresh
+  // (cookie caducada) no entra en la lógica de renovar.
   if (request.url.startsWith(`${environment.apiUrl}/auth/`)) {
     return next(request);
   }
@@ -38,7 +40,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       // 401 porque el token ha caducado: lo renuevo y repito la petición original una vez
       if (error.error?.message === TOKEN_EXPIRED) {
         return auth.refresh().pipe(
-          // Si el refresh falla (el refresh token también ha caducado), cierro la sesión
+          // Si el refresh falla (la cookie ha caducado o se ha borrado), cierro la sesión
           catchError((refreshError) => {
             auth.logout();
             return throwError(() => refreshError);

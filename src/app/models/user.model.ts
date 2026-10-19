@@ -29,13 +29,18 @@ export interface LoginRequest {
   password: string;
 }
 
+// El refresh token no viene en el JSON: el backend lo deja en una cookie HttpOnly
 export interface LoginResponse {
   token: string;
-  refreshToken: string;
   user: User;
 }
 
-// POST /auth/refresh
+// POST /auth/refresh (sin body: el refresh token va en la cookie)
 export interface RefreshResponse {
   token: string;
+}
+
+// GET /users/me: el usuario con sesión, para recuperarlo al recargar la página
+export interface MeResponse {
+  user: User;
 }

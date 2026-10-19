@@ -13,7 +13,6 @@ describe('Login', () => {
   let navigateByUrl: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
-    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [Login],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
@@ -26,10 +25,7 @@ describe('Login', () => {
     await fixture.whenStable();
   });
 
-  afterEach(() => {
-    httpMock.verify();
-    localStorage.clear();
-  });
+  afterEach(() => httpMock.verify());
 
   it('shows the message of the API when the credentials are wrong', async () => {
     component.form.setValue({ email: 'admin@example.com', password: 'mala12345' });
@@ -53,7 +49,6 @@ describe('Login', () => {
     component.login();
     httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
       token: 't',
-      refreshToken: 'r',
       user: { _id: 'u1', name: 'Admin', email: 'admin@example.com', role: 'admin' },
     });
 
@@ -66,7 +61,6 @@ describe('Login', () => {
     component.login();
     httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
       token: 't',
-      refreshToken: 'r',
       user: { _id: 'u1', name: 'Admin', email: 'admin@example.com', role: 'admin' },
     });
 

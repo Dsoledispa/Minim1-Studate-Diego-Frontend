@@ -11,6 +11,7 @@ export { BOOK_LANGUAGES, BOOK_TAGS } from './book.model';
 export type {
   LoginRequest,
   LoginResponse,
+  MeResponse,
   RefreshResponse,
   RegisterRequest,
   RegisterResponse,

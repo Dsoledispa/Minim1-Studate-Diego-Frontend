@@ -4,25 +4,20 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
 import { environment } from '../../environments/environment';
+import { AuthService } from '../services/auth.service';
 import { authInterceptor } from './auth.interceptor';
 
 describe('authInterceptor', () => {
   let http: HttpClient;
   let httpMock: HttpTestingController;
+  let auth: AuthService;
   let navigate: ReturnType<typeof vi.spyOn>;
 
   const authorsUrl = `${environment.apiUrl}/authors`;
   const refreshUrl = `${environment.apiUrl}/auth/refresh`;
+  const logoutUrl = `${environment.apiUrl}/auth/logout`;
 
   beforeEach(() => {
-    localStorage.clear();
-    localStorage.setItem('token', 'access-1');
-    localStorage.setItem('refreshToken', 'refresh-1');
-    localStorage.setItem(
-      'user',
-      JSON.stringify({ _id: 'u1', name: 'Admin', email: 'a@b.c', role: 'admin' }),
-    );
-
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
@@ -32,15 +27,25 @@ describe('authInterceptor', () => {
     });
     http = TestBed.inject(HttpClient);
     httpMock = TestBed.inject(HttpTestingController);
+    auth = TestBed.inject(AuthService);
     navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    // El token ya no está en localStorage: la sesión se prepara con un login simulado
+    auth.login({ email: 'admin@example.com', password: 'seminari7' }).subscribe();
+    httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
+      token: 'access-1',
+      user: { _id: 'u1', name: 'Admin', email: 'a@b.c', role: 'admin' },
+    });
   });
 
-  afterEach(() => {
-    httpMock.verify();
-    localStorage.clear();
-  });
+  afterEach(() => httpMock.verify());
 
-  it('adds the Authorization header with the stored token', () => {
+  // logout() avisa a la API para que borre la cookie: en los tests hay que responder a esa petición
+  function expectLogout(): void {
+    httpMock.expectOne(logoutUrl).flush(null, { status: 204, statusText: 'No Content' });
+  }
+
+  it('adds the Authorization header with the token in memory', () => {
     http.get(authorsUrl).subscribe();
 
     const req = httpMock.expectOne(authorsUrl);
@@ -64,8 +69,10 @@ describe('authInterceptor', () => {
       .expectOne(authorsUrl)
       .flush({ message: 'El token ha caducado' }, { status: 401, statusText: 'Unauthorized' });
 
+    // El refresh no lleva body: el refresh token va en la cookie
     const refresh = httpMock.expectOne(refreshUrl);
-    expect(refresh.request.body).toEqual({ refreshToken: 'refresh-1' });
+    expect(refresh.request.body).toEqual({});
+    expect(refresh.request.withCredentials).toBe(true);
     refresh.flush({ token: 'access-2' });
 
     const retry = httpMock.expectOne(authorsUrl);
@@ -86,9 +93,10 @@ describe('authInterceptor', () => {
     httpMock
       .expectOne(refreshUrl)
       .flush({ message: 'El token ha caducado' }, { status: 401, statusText: 'Unauthorized' });
+    expectLogout();
 
     expect(failed).toBe(true);
-    expect(localStorage.getItem('token')).toBeNull();
+    expect(auth.getToken()).toBeNull();
     expect(navigate).toHaveBeenCalledWith(['/login']);
   });
 
@@ -98,6 +106,7 @@ describe('authInterceptor', () => {
     httpMock
       .expectOne(authorsUrl)
       .flush({ message: 'Token no válido' }, { status: 401, statusText: 'Unauthorized' });
+    expectLogout();
 
     httpMock.expectNone(refreshUrl);
     expect(navigate).toHaveBeenCalledWith(['/login']);
@@ -112,7 +121,7 @@ describe('authInterceptor', () => {
       .flush({ message: 'Necesitas el rol admin' }, { status: 403, statusText: 'Forbidden' });
 
     expect(status).toBe(403);
-    expect(localStorage.getItem('token')).toBe('access-1');
+    expect(auth.getToken()).toBe('access-1');
     expect(navigate).not.toHaveBeenCalled();
   });
 });
