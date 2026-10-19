@@ -167,10 +167,10 @@ src/
       book.model.ts          Book, BookInput, CreateBook, UpdateBook, BOOK_LANGUAGES, BOOK_TAGS
       user.model.ts          User, UserRole y las peticiones y respuestas de /auth
     services/              Las únicas piezas que hablan con la API (HttpClient)
-      auth.service.ts        register, login, refresh, logout y el usuario con sesión (signal)
+      auth.service.ts        register, login, refresh, restoreSession, logout; token y usuario en signals
       author.service.ts      getAuthors, getAuthor, createAuthor, updateAuthor, deleteAuthor
       book.service.ts        getBooks, getBook, createBook, updateBook, deleteBook
-      chat.service.ts        El socket del chat: connect, joinRoom, sendMessage y los eventos como Observables
+      chat.service.ts        El socket: connect, joinRoom, sendMessage, los eventos del chat y los avisos del backoffice como Observables
     pipes/                 Formatean datos en la plantilla
       language-name-pipe.ts  'es' -> 'Castellano'
       truncate-pipe.ts       Corta textos largos con "..."
@@ -198,17 +198,23 @@ signal. Tampoco saben del token: lo añade el interceptor a todas las peticiones
 Cómo funciona por dentro (interceptor, guards, renovación del token) está en el
 [apartado 13 de la GUIA](GUIA.md#13-autenticación-interceptor-y-guards). En resumen:
 
-1. En el login, la API devuelve `{ token, refreshToken, user }` y `AuthService` lo guarda todo.
+1. En el login, la API devuelve `{ token, user }` y `AuthService` lo guarda en dos signals, **solo en
+   memoria**. El refresh token no llega al JSON: la API lo deja en una cookie HttpOnly que el navegador
+   guarda él solo.
 2. `authInterceptor` añade `Authorization: Bearer <token>` a cada petición.
 3. El access token caduca a los 15 minutos. Cuando la API responde 401 con "El token ha caducado", el
-   interceptor pide uno nuevo a `POST /auth/refresh` y repite la petición, sin que el usuario lo note.
-   Si el refresh token también ha caducado (a los 7 días), cierra la sesión y lleva al login.
-4. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol.
+   interceptor pide uno nuevo a `POST /auth/refresh` (sin body: la cookie va sola) y repite la
+   petición, sin que el usuario lo note. Si la cookie también ha caducado (a los 7 días), cierra la
+   sesión y lleva al login.
+4. Al recargar la página el access token se ha perdido. Antes de pintar nada (`provideAppInitializer`),
+   `restoreSession()` llama a `/auth/refresh` y a `GET /users/me` para recuperar la sesión; si la cookie
+   no vale, la app arranca sin sesión y `authGuard` lleva al login.
+5. "Cerrar sesión" llama a `POST /auth/logout`, que borra la cookie, y olvida el token de memoria.
+6. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol.
 
 ### Dónde se guardan los tokens: localStorage o cookie HttpOnly
 
-Los guardamos en **localStorage** (con las claves `token`, `refreshToken` y `user`). Las dos opciones
-que se suelen comparar:
+Las dos opciones que se suelen comparar:
 
 | | localStorage | Cookie HttpOnly |
 |---|---|---|
@@ -217,10 +223,22 @@ que se suelen comparar:
 | Riesgo principal | **XSS**: si alguien consigue ejecutar un script en la página, puede leer el token y usarlo desde otro sitio | **CSRF**: el navegador envía la cookie solo, también en peticiones que provoca otra web; hay que protegerse (`SameSite`, token anti-CSRF) |
 | Qué pide | Nada especial: encaja con una API que devuelve el token en el JSON | Cambiar el backend (enviar y leer cookies) y configurar CORS con `credentials` |
 
-Elegimos localStorage porque es lo que encaja con el contrato de la API (el token llega en el JSON del
-login) y se entiende sin piezas extra. El riesgo de XSS se reduce porque Angular escapa todo lo que se
-pinta en las plantillas (`{{ }}` nunca ejecuta HTML), y porque el access token dura poco. En una
-aplicación real con datos sensibles, la cookie HttpOnly es la opción más segura.
+Al principio los tokens iban en localStorage. El problema es que un script inyectado en la página se
+lleva los dos, y con el refresh token puede pedir access tokens nuevos durante 7 días. Ahora se aplica
+el patrón recomendado:
+
+- El **access token** vive solo en una signal de `AuthService`. Nunca en `localStorage` ni en
+  `sessionStorage`. Dura 15 minutos y se pierde al recargar, pero se recupera con la cookie.
+- El **refresh token** va en la cookie `refreshToken`, con `HttpOnly` (JavaScript no puede leerla:
+  `document.cookie` no la muestra), `SameSite=Strict` (el navegador no la envía en peticiones que
+  provoca otra web, que es la protección contra CSRF), `Path=/auth` (solo viaja a `/auth/refresh` y
+  `/auth/logout`), la misma duración que el token y `Secure` en producción.
+- Para que la cookie cruce de `localhost:4200` a `localhost:1337`, las llamadas a `/auth` llevan
+  `withCredentials: true` y el backend acepta credenciales con el origen exacto del frontend.
+
+Se puede comprobar en DevTools (F12): en Application, Local Storage no tiene ningún token; en
+Application, Cookies, `refreshToken` aparece con la casilla HttpOnly marcada; y en la consola,
+`document.cookie` devuelve una cadena vacía.
 
 Los guards y el ocultar botones son solo comodidad: quien protege los datos es el backend, que
 comprueba el token y el rol en cada petición. Desde las herramientas del navegador se puede saltar un
@@ -240,6 +258,11 @@ el Contrato de [LOGS.md](LOGS.md).
 
 Arriba, la franja **Usuarios** dice quién tiene el chat abierto ahora mismo (punto verde) y quién no
 (gris). Pulsar un usuario abre el chat directo con él.
+
+Por el mismo socket llegan eventos que **no son chat**: cuando un admin crea, edita o borra un libro o
+un autor, el servidor emite `books:changed` o `authors:changed` a todos los conectados y el chat lo
+enseña en la franja **Avisos del backoffice** ("Libro creado: Dune"). Para verlo, un usuario con el
+chat abierto y un admin guardando un libro en otra ventana.
 
 Al entrar en una sala llegan los últimos 50 mensajes. Para probarlo hacen falta dos sesiones a la vez,
 por ejemplo una ventana normal con `admin@example.com` y una de incógnito con `user@example.com`.

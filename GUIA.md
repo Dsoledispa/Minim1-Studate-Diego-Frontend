@@ -519,12 +519,13 @@ La autenticación se reparte en cuatro piezas. Cada una hace una sola cosa:
 
 ### La sesión en signals
 
-`AuthService` guarda el usuario en una signal privada y la expone de solo lectura. Lo que depende de
-ella se declara con `computed`, y se recalcula solo:
+`AuthService` guarda el access token y el usuario en dos signals privadas, solo en memoria, y expone
+el usuario de solo lectura. Lo que depende de él se declara con `computed`, y se recalcula solo:
 
 ```ts
 // auth.service.ts
-private currentUser = signal<User | null>(readStoredUser());
+private accessToken = signal<string | null>(null);
+private currentUser = signal<User | null>(null);
 readonly user = this.currentUser.asReadonly();
 readonly isLoggedIn = computed(() => this.currentUser() !== null);
 readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
@@ -539,8 +540,29 @@ Por eso la barra de navegación cambia sola al iniciar o cerrar sesión, sin que
 }
 ```
 
-`readStoredUser()` lee el usuario de localStorage al arrancar: así la sesión sobrevive a recargar la
-página. Por qué localStorage y no una cookie está en el README, en el apartado Autenticación.
+El access token no se guarda en `localStorage` ni en `sessionStorage` (un script inyectado podría
+leerlos), así que al recargar la página se pierde. Para que la sesión sobreviva, el refresh token vive
+en una cookie HttpOnly que pone el backend y que JavaScript no puede leer, y al arrancar la app se
+llama a `restoreSession()` antes de pintar nada:
+
+```ts
+// app.config.ts
+provideAppInitializer(() => inject(AuthService).restoreSession()),
+
+// auth.service.ts
+restoreSession(): Observable<void> {
+  return this.refresh().pipe(                     // POST /auth/refresh: la cookie va sola
+    switchMap(() => this.http.get<MeResponse>(`${environment.apiUrl}/users/me`)),
+    tap((response) => this.currentUser.set(response.user)),
+    map(() => undefined),
+    catchError(() => { this.clearSession(); return of(undefined); }), // sin cookie válida, sin sesión
+  );
+}
+```
+
+Las llamadas a `/auth` llevan `{ withCredentials: true }`: sin eso el navegador no envía ni acepta
+la cookie entre `localhost:4200` y `localhost:1337`. Por qué cookie y no localStorage está en el
+README, en el apartado Autenticación.
 
 ### El interceptor
 
@@ -620,8 +642,13 @@ backend, que comprueba el token y el rol en cada petición.
 ### Probarlo
 
 - Con `admin@example.com` y `user@example.com` (contraseña `seminari7`) se ve la diferencia entre roles.
-- En F12, pestaña Application, Local Storage: están `token`, `refreshToken` y `user`. El token se
-  puede pegar en https://jwt.io para ver su contenido (`sub`, `role`, `exp`).
+- En F12, pestaña Application, Local Storage: no hay ningún token. En Application, Cookies,
+  `http://localhost:1337`: está `refreshToken` con la casilla HttpOnly marcada, SameSite Strict y Path
+  `/auth`. En la consola, `document.cookie` devuelve `""`.
+- En Network, la respuesta de `POST /auth/login` trae la cabecera `Set-Cookie` y el JSON solo `token` y
+  `user`. El token se puede pegar en https://jwt.io para ver su contenido (`sub`, `role`, `exp`).
+- Recarga la página (F5): en Network salen `POST /auth/refresh` y `GET /users/me` y la sesión sigue.
+  Pulsa "Cerrar sesión" y vuelve a entrar en `/books`: `/auth/refresh` responde 401 y la app va al login.
 - Para ver la renovación sin esperar 15 minutos, arranca el backend con tokens cortos
   (`JWT_EXPIRES_IN=20s npm run dev`) y mira la pestaña Network.
 
@@ -697,6 +724,27 @@ return `direct:${firstId}:${secondId}`;
 
 El servidor comprueba que quien entra en un chat directo es uno de esos dos usuarios.
 
+### Eventos que no son chat: avisos del backoffice
+
+Por el mismo socket el servidor envía `books:changed` y `authors:changed` cuando un admin crea, edita o
+borra un libro o un autor. Aquí el cliente no emite nada: solo escucha. El servicio los junta en un
+único Observable y el componente guarda los últimos cinco en una signal:
+
+```ts
+// chat.service.ts
+this.socket.on('books:changed', (change: BackofficeChange) => {
+  this.backofficeSubject.next({ ...change, kind: 'book' });
+});
+
+// chat.ts
+this.chatService.backofficeChanges$.subscribe((notice) => {
+  this.notices.update((notices) => [notice, ...notices].slice(0, MAX_NOTICES));
+});
+```
+
+En el servidor, el controller de libros llama a `notifyBooksChanged(...)` después de responder la
+petición HTTP, y esa función hace `io.emit(...)` a todos los conectados (no a una sala).
+
 ### Limpieza en ngOnDestroy
 
 Al salir de la página del chat hay que cerrar lo que se ha abierto. Si no, al volver se acumularían
@@ -717,5 +765,7 @@ poder cancelarlas todas con una sola llamada.
 
 - Abre dos sesiones a la vez (una ventana normal y otra de incógnito) con `admin@example.com` y
   `user@example.com`, y escribe en la sala general.
+- Con el `user` en el chat, crea un libro con el admin en la otra ventana: en el chat del `user` aparece
+  "Libro creado: ..." en la franja de avisos.
 - En F12, pestaña Network, filtro WS: se ve la conexión del socket y, en Messages, cada evento que va
   y viene.

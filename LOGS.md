@@ -14,19 +14,27 @@ Las tareas del backend están en el LOGS.md de
 Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se cambia en los dos
 LOGS.md.
 
-- **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` se autentica con
-  su propio refresh token. `GET /ping` y la documentación (`/api-docs`) también son públicas. Todo lo
-  demás exige token.
+- **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` y
+  `POST /auth/logout` se autentican con la cookie del refresh token. `GET /ping` y la documentación
+  (`/api-docs`) también son públicas. Todo lo demás exige token.
 - **Registro**: el cuerpo es `{ name, email, password }` (contraseña de 8 caracteres como mínimo;
   `role` no se acepta, todo usuario nuevo es `user`). Responde 201 con `{ user }` y **sin token**, 409
   si el email ya existe o 422 si el cuerpo no es válido. El frontend redirige entonces a la página de
   login.
-- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, refreshToken, user }` o 401. `user`
-  es `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña.
-- **Refresh**: el cuerpo es `{ refreshToken }`. Responde `{ token }` (un access token nuevo) o 401 si el
-  refresh token ha caducado o no es válido. El refresh token no cambia.
+- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, user }` o 401. `user` es
+  `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña. El refresh token **no va en el
+  JSON**: se deja en la cookie `refreshToken` (HttpOnly, SameSite=Strict, Path=/auth, Max-Age de 7
+  días; Secure en producción).
+- **Refresh**: sin cuerpo. Lee el refresh token de la cookie y responde `{ token }` (un access token
+  nuevo), o 401 si no hay cookie, ha caducado o no es válida. El refresh token no cambia.
+- **Logout**: sin cuerpo. Borra la cookie y responde 204. Después, `/auth/refresh` responde 401.
+- **Cookies y CORS**: el frontend llama a `/auth/*` con `withCredentials: true`; el backend responde
+  con `Access-Control-Allow-Credentials: true` y el origen exacto de `CORS_ORIGIN` (no vale `*`).
 - **Token**: se envía en la cabecera `Authorization: Bearer <token>`. Su payload lleva los claims `sub`
-  (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días.
+  (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días. El
+  frontend guarda el access token solo en memoria (una signal), nunca en `localStorage` ni
+  `sessionStorage`; al recargar la página lo recupera llamando a `/auth/refresh` y después a
+  `/users/me`.
 - **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`)
   o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol necesario.
 - **Roles**: el CRUD del backoffice (autores y libros) es solo para `admin`. El chat es para todos los
@@ -54,6 +62,10 @@ LOGS.md.
   - Un mensaje es `{ _id, room, user: { _id, name }, text, timestamp }`.
   - `GET /users` (con sesión, cualquier rol) responde `{ users: [{ _id, name }] }`, ordenados por
     nombre, para elegir con quién hablar en el chat directo.
+- **Avisos del backoffice** (socket.io, no son chat): cuando un admin crea, edita o borra un libro o
+  un autor, el servidor emite a todos los conectados `books:changed` o `authors:changed` con
+  `{ action: 'created' | 'updated' | 'deleted', id, name, userId }` (`name` es el título del libro o el
+  nombre del autor; `userId`, quién lo ha hecho). El cliente no envía nada: solo escucha.
 - **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde
   `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
 
@@ -96,6 +108,15 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
 - [x] Las listas piden cada página a la API en lugar de trocear la lista en memoria; el componente
   `app-pagination` se reutiliza tal cual
 - [x] Hacer que el buscador funcione junto con la paginación
+
+### Ejercicio del seminario 7: tokens seguros y más eventos de socket
+
+- [x] Access token solo en una signal de `AuthService`, nunca en `localStorage` ni `sessionStorage`
+- [x] Llamadas a `/auth` con `withCredentials`; el refresh token vive en la cookie HttpOnly
+- [x] Al recargar la página, llamar a `/auth/refresh` al arrancar para recuperar la sesión; si la
+  cookie no vale, al login
+- [x] Logout contra `POST /auth/logout`
+- [x] Escuchar los eventos `books:changed` y `authors:changed` y enseñarlos en el chat
 
 ### Extra opcional
 
@@ -249,3 +270,43 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
   build` correcto. En el navegador con dos usuarios, 13 comprobaciones correctas: aparece y
   desaparece al entrar y salir del chat, cerrar una de dos pestañas no lo desconecta, el contador
   coincide con los puntos verdes, los conectados van primero y el clic abre el directo.
+
+### 2026-10-19 · Ejercicio del seminario 7: access token en memoria y refresh token en cookie HttpOnly
+
+- Problema de partida: `AuthService` guardaba `token`, `refreshToken` y `user` en `localStorage`.
+  Cualquier script que se ejecute en la página (XSS) puede leerlo, y con el refresh token conseguir
+  access tokens nuevos durante 7 días.
+- `AuthService`: el access token pasa a una signal privada `accessToken` (solo en memoria), igual que
+  el usuario. `getToken()` la lee, así el interceptor y el chat no cambian. Las tres llamadas a `/auth`
+  (login, refresh y logout) llevan `{ withCredentials: true }`, que es lo que hace que el navegador
+  envíe y acepte la cookie entre `localhost:4200` y `localhost:1337`. Desaparece todo uso de
+  `localStorage` para la sesión.
+- Al recargar la página el access token se ha perdido. Nuevo `restoreSession()`: llama a
+  `/auth/refresh` (la cookie va sola) y después a `GET /users/me` para recuperar el usuario; si algo
+  falla se queda sin sesión y no lanza error. Se ejecuta antes de pintar nada con
+  `provideAppInitializer` en `app.config.ts`, así los guards ya saben si hay sesión cuando se abre la
+  primera ruta y, si la cookie no vale, `authGuard` lleva al login sin código extra.
+- `logout()` llama a `POST /auth/logout` (el backend borra la cookie) y, sin esperar la respuesta,
+  vacía las signals y va al login.
+- `LoginResponse` pierde `refreshToken`; nuevo `MeResponse` para `/users/me`.
+- Eventos de socket que no son chat: `ChatService` escucha `books:changed` y `authors:changed` y los
+  expone como `backofficeChanges$`. El chat los enseña en una franja "Avisos del backoffice" con los 5
+  últimos ("Libro creado: Dune", "Autor borrado: Borges"...). El socket sigue viviendo solo en la
+  página del chat, como hasta ahora.
+- Tests: los specs que preparaban la sesión escribiendo en `localStorage` (`AuthService`, interceptor,
+  guards, `App` y `Chat`) ahora la preparan con un login simulado con `HttpTestingController`. Nuevos
+  tests de `restoreSession()` (con cookie válida y con 401) y de los avisos en el chat.
+- Documentación: README (apartado Autenticación reescrito con la decisión nueva y la tabla
+  localStorage frente a cookie), GUIA (apartado 13 y "Probarlo" con las comprobaciones en DevTools,
+  apartado 14 con los avisos) y el Contrato en los dos LOGS.md.
+- Verificación: `npm run lint` sin errores, `npm test -- --watch=false` con 65 tests en verde (14
+  ficheros) y `npm run build` correcto. En Chromium (Playwright) contra el backend real, 17
+  comprobaciones correctas: el JSON del login solo trae `token` y `user`; `localStorage` y
+  `sessionStorage` vacíos; `document.cookie` vacío; la cookie `refreshToken` existe con `HttpOnly`,
+  `SameSite=Strict`, `Path=/auth`, 7 días y sin `Secure`; al recargar se llama a `/auth/refresh` (200) y
+  `/users/me` (200) y la sesión sigue; un `user` con el chat abierto ve "Libro creado: ..." cuando el
+  admin crea un libro en otra ventana; al cerrar sesión se llama a `/auth/logout` (204), la cookie
+  desaparece y al volver a entrar `/auth/refresh` da 401 y la app va al login.
+- Prompt de IA usado: «Resolver el ejercicio del seminario 7 (PDF): refresh token en cookie HttpOnly y
+  SameSite=Strict solo para /auth, access token solo en memoria, CORS con credenciales, y añadir
+  eventos de socket.io que no sean de chat. Hacerlo sencillo, al estilo del resto del proyecto».
