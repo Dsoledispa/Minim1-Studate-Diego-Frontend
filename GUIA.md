@@ -1,5 +1,10 @@
 # Guía del proyecto
 
+> Esta guía explica Angular con el código del ejercicio del Seminario 7 (autores, libros y chat), del que
+> parte Studate. Ese código ya no está en el proyecto, pero sigue entero en el tag `seminari7-base`
+> (`git show seminari7-base:src/app/components/books-list/books-list.ts`). Los conceptos son los mismos
+> que usan las pantallas de Studate.
+
 Aquí explicamos cómo está hecho el backoffice y dónde se ve cada punto del seminario de Angular en el
 código. Para instalarlo y arrancarlo, mira el [README](README.md).
 

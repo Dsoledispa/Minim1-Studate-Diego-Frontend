@@ -1,23 +1,21 @@
-# Seminari 7: frontend Angular con JWT y WebSockets
+# Studate: frontend
 
-Backoffice en Angular para gestionar **autores** y **libros**: desde aquí se pueden listar, buscar,
-crear, editar y borrar. Para entrar hay que iniciar sesión, y el backoffice es solo para
-administradores. Es el frontend del Seminario 7 de EA:
+Frontend en Angular de [Studate](https://studateapp.blogspot.com/), la app para conocer a gente de tu
+propia universidad. Es el proyecto del Grupo 3 de EA (María Cazorla, Diego Soledispa y Miguel Ángel
+Quiroga).
 
-> Backend/Frontend: JWT, WebSockets. Backend TS + Express. Frontend Angular.
+En el Sprint 1 (el mínimo 1) el objetivo es el **backoffice**: la zona de administración, en la que solo
+entra un `admin`, para gestionar los usuarios y sus roles, los votos de La Orla y los Dates.
 
-Este repositorio parte del frontend del Seminario 6, que ya cubría consumir una API REST (CRUD),
-formularios reactivos, validación y routing. Sobre esa base, el equipo añade en este seminario:
+El proyecto parte del ejercicio del Seminario 7 (login con JWT, refresh token en cookie HttpOnly,
+interceptor, guards y paginación del servidor), que se guarda tal cual en el tag `seminari7-base`.
 
-- Registro y login, con el token JWT guardado, un interceptor que lo envía y guards en las rutas
-- Listados paginados por el servidor
-- Extra: chat en tiempo real con socket.io (general, de grupo y directo)
+Consume la API de [STUDUDATE---BACKEND](https://github.com/mariacazorla/STUDUDATE---BACKEND).
 
-Consume la API de [EA-Seminari7-JWT-WebSockets-Backend](https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Backend).
-
-Cómo funciona por dentro (componentes, servicios, signals, routing, formularios...): [GUIA.md](GUIA.md).
-Las tareas y la bitácora del seminario: [LOGS.md](LOGS.md). Cómo trabajamos (ramas, commits, pull
-requests): [CONTRIBUTING.md](CONTRIBUTING.md).
+Cómo funciona Angular por dentro (componentes, servicios, signals, routing, formularios...):
+[GUIA.md](GUIA.md). Las tareas del sprint y la bitácora: [LOGS.md](LOGS.md). Cómo trabajamos (ramas,
+commits, pull requests): [CONTRIBUTING.md](CONTRIBUTING.md). El tablero del sprint es el
+[GitHub Project de Studate](https://github.com/users/mariacazorla/projects/2).
 
 ## Stack tecnológico
 
@@ -41,7 +39,7 @@ El token JWT no necesita librería: el interceptor y el guard se hacen con lo qu
 
 - [Node.js](https://nodejs.org/) 24 LTS (mínimo 22.12, que es lo que exige Angular 21). Incluye
   [npm](https://www.npmjs.com/).
-- El backend del Seminario 7 arrancado, con su MongoDB (ver abajo).
+- El backend de Studate arrancado, con su MongoDB (ver abajo).
 - [VS Code](https://code.visualstudio.com/) con la extensión *Angular Language Service* (recomendado) y
   [Angular DevTools](https://angular.dev/tools/devtools) en el navegador.
 
@@ -56,8 +54,8 @@ Hacen falta dos terminales: una para la API y otra para Angular.
 Con MongoDB ya arrancado (o con la URL de Atlas puesta en el `.env`):
 
 ```
-git clone https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Backend
-cd EA-Seminari7-JWT-WebSockets-Backend
+git clone https://github.com/mariacazorla/STUDUDATE---BACKEND.git
+cd STUDUDATE---BACKEND
 npm install
 cp .env.example .env
 npm run seed
@@ -73,8 +71,8 @@ Si ya tenías un `.env`, copia en él las variables `JWT_...` de `.env.example`.
 **2. Frontend (este repo)**
 
 ```
-git clone https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Frontend
-cd EA-Seminari7-JWT-WebSockets-Frontend
+git clone https://github.com/mariacazorla/STUDATE---FRONTEND.git
+cd STUDATE---FRONTEND
 npm install
 npm start
 ```
