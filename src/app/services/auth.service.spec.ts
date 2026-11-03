@@ -39,14 +39,14 @@ describe('AuthService', () => {
   });
 
   it('register() posts name, email and password and does not start a session', () => {
-    service.register({ name: 'Ana', email: 'ana@example.com', password: 'seminari7' }).subscribe();
+    service.register({ name: 'Ana', email: 'ana@example.com', password: 'studate26' }).subscribe();
 
     const req = httpMock.expectOne(`${environment.apiUrl}/auth/register`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
       name: 'Ana',
       email: 'ana@example.com',
-      password: 'seminari7',
+      password: 'studate26',
     });
     req.flush({ user: { ...loginResponse.user, role: 'user' } });
 
@@ -54,7 +54,7 @@ describe('AuthService', () => {
   });
 
   it('login() sends the cookies and keeps the token only in memory', () => {
-    service.login({ email: 'admin@example.com', password: 'seminari7' }).subscribe();
+    service.login({ email: 'admin@example.com', password: 'studate26' }).subscribe();
 
     const req = httpMock.expectOne(loginUrl);
     expect(req.request.withCredentials).toBe(true);
@@ -125,7 +125,7 @@ describe('AuthService', () => {
 
   it('logout() asks the API to delete the cookie, clears the session and goes to the login page', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    service.login({ email: 'admin@example.com', password: 'seminari7' }).subscribe();
+    service.login({ email: 'admin@example.com', password: 'studate26' }).subscribe();
     httpMock.expectOne(loginUrl).flush(loginResponse);
 
     service.logout();

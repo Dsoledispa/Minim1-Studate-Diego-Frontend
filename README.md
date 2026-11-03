@@ -1,23 +1,25 @@
-# Seminari 7: frontend Angular con JWT y WebSockets
+# Studate: frontend
 
-Backoffice en Angular para gestionar **autores** y **libros**: desde aquí se pueden listar, buscar,
-crear, editar y borrar. Para entrar hay que iniciar sesión, y el backoffice es solo para
-administradores. Es el frontend del Seminario 7 de EA:
+Frontend en Angular de [Studate](https://studateapp.blogspot.com/), la app para conocer a gente de tu
+propia universidad. Es el proyecto del Grupo 3 de EA (María Cazorla, Diego Soledispa y Miguel Ángel
+Quiroga).
 
-> Backend/Frontend: JWT, WebSockets. Backend TS + Express. Frontend Angular.
+En el Sprint 1 (el mínimo 1) el objetivo es el **backoffice**: la zona de administración, en la que solo
+entra un `admin`, para gestionar los usuarios y sus roles y los votos de La Orla. La app tiene dos zonas:
 
-Este repositorio parte del frontend del Seminario 6, que ya cubría consumir una API REST (CRUD),
-formularios reactivos, validación y routing. Sobre esa base, el equipo añade en este seminario:
+- **Dates**: la pantalla de entrada para cualquier usuario con sesión. Cada uno ve y gestiona sus Dates
+  (las citas que se abren cuando dos usuarios se dan A+); el admin ve todos.
+- **Backoffice** (Usuarios y La Orla): solo para `admin`.
 
-- Registro y login, con el token JWT guardado, un interceptor que lo envía y guards en las rutas
-- Listados paginados por el servidor
-- Extra: chat en tiempo real con socket.io (general, de grupo y directo)
+El proyecto parte del ejercicio del Seminario 7 (login con JWT, refresh token en cookie HttpOnly,
+interceptor, guards y paginación del servidor), que se guarda tal cual en el tag `seminari7-base`.
 
-Consume la API de [EA-Seminari7-JWT-WebSockets-Backend](https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Backend).
+Consume la API de [STUDUDATE---BACKEND](https://github.com/mariacazorla/STUDUDATE---BACKEND).
 
-Cómo funciona por dentro (componentes, servicios, signals, routing, formularios...): [GUIA.md](GUIA.md).
-Las tareas y la bitácora del seminario: [LOGS.md](LOGS.md). Cómo trabajamos (ramas, commits, pull
-requests): [CONTRIBUTING.md](CONTRIBUTING.md).
+Cómo funciona Angular por dentro (componentes, servicios, signals, routing, formularios...):
+[GUIA.md](GUIA.md). Las tareas del sprint y la bitácora: [LOGS.md](LOGS.md). Cómo trabajamos (ramas,
+commits, pull requests): [CONTRIBUTING.md](CONTRIBUTING.md). El tablero del sprint es el
+[GitHub Project de Studate](https://github.com/users/mariacazorla/projects/2).
 
 ## Stack tecnológico
 
@@ -33,7 +35,6 @@ Lo que ya está instalado y funcionando:
 | [jsdom](https://github.com/jsdom/jsdom) | 28.1 | Simula el navegador dentro de Node para que los tests puedan pintar componentes |
 | [ESLint](https://eslint.org/) + [angular-eslint](https://github.com/angular-eslint/angular-eslint) | 10.12 / 21.4 | Linter: analiza el TypeScript y también las plantillas HTML, con reglas propias de Angular y de accesibilidad |
 | [Prettier](https://prettier.io/) | 3.9 | Da formato al código (reglas en `.prettierrc`, con el parser de Angular para los `.html`) |
-| [socket.io-client](https://socket.io/docs/v4/client-api/) | 4.8 | Cliente de WebSockets del chat, encapsulado en `ChatService` |
 
 El token JWT no necesita librería: el interceptor y el guard se hacen con lo que ya trae Angular.
 
@@ -41,7 +42,7 @@ El token JWT no necesita librería: el interceptor y el guard se hacen con lo qu
 
 - [Node.js](https://nodejs.org/) 24 LTS (mínimo 22.12, que es lo que exige Angular 21). Incluye
   [npm](https://www.npmjs.com/).
-- El backend del Seminario 7 arrancado, con su MongoDB (ver abajo).
+- El backend de Studate arrancado, con su MongoDB (ver abajo).
 - [VS Code](https://code.visualstudio.com/) con la extensión *Angular Language Service* (recomendado) y
   [Angular DevTools](https://angular.dev/tools/devtools) en el navegador.
 
@@ -56,8 +57,8 @@ Hacen falta dos terminales: una para la API y otra para Angular.
 Con MongoDB ya arrancado (o con la URL de Atlas puesta en el `.env`):
 
 ```
-git clone https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Backend
-cd EA-Seminari7-JWT-WebSockets-Backend
+git clone https://github.com/mariacazorla/STUDUDATE---BACKEND.git
+cd STUDUDATE---BACKEND
 npm install
 cp .env.example .env
 npm run seed
@@ -65,16 +66,15 @@ npm run dev
 ```
 
 La API queda en http://localhost:1337 y su documentación (Swagger) en http://localhost:1337/api-docs.
-`npm run seed` mete 2 usuarios, 12 autores y 12 libros de ejemplo; con `npm run seed -- --reset` se
-vuelven a poner desde cero. Si tu base de datos es de antes del Seminario 7, ejecuta una de las dos
-cosas: `npm run migrate-authors` o `npm run seed -- --reset` (lo explica el README del backend).
+`npm run seed` mete los usuarios de ejemplo; con `npm run seed -- --reset` se vuelven a poner desde
+cero.
 Si ya tenías un `.env`, copia en él las variables `JWT_...` de `.env.example`.
 
 **2. Frontend (este repo)**
 
 ```
-git clone https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Frontend
-cd EA-Seminari7-JWT-WebSockets-Frontend
+git clone https://github.com/mariacazorla/STUDATE---FRONTEND.git
+cd STUDATE---FRONTEND
 npm install
 npm start
 ```
@@ -85,15 +85,16 @@ Y se abre http://localhost:4200. La página se recarga sola cada vez que guardas
 
 | Email | Contraseña | Qué ve |
 |---|---|---|
-| `admin@example.com` | `seminari7` | El backoffice entero: autores y libros |
-| `user@example.com` | `seminari7` | Solo la página de inicio: el backoffice es para administradores |
+| `admin@example.com` | `studate26` | Todos los Dates y el backoffice (Usuarios y La Orla) |
+| `user@example.com` | `studate26` | Solo sus Dates: el backoffice es solo para administradores |
+| `aina@example.com` | `studate26` | Nada: está inactiva y la API no la deja entrar |
 
 También se puede crear una cuenta en "Registrarse". Las cuentas nuevas son siempre de rol `user`.
 
 ## Configuración: un solo fichero
 
 El frontend no usa `.env`: lo que llega al navegador lo puede leer cualquiera, así que aquí no hay
-secretos. Toda la configuración está en **un** fichero, y para cambiar la dirección de la API o del chat se toca
+secretos. Toda la configuración está en **un** fichero, y para cambiar la dirección de la API se toca
 aquí y en ningún sitio más:
 
 ```typescript
@@ -101,20 +102,15 @@ aquí y en ningún sitio más:
 export const environment = {
   // URL usada por las llamadas HTTP.
   apiUrl: 'http://localhost:1337',
-
-  // URL base usada para conectar con Socket.IO.
-  socketUrl: 'http://localhost:1337',
 };
 ```
-
-Las dos son iguales porque el backend sirve la API y el chat en el mismo puerto.
 
 ## Scripts
 
 | Comando | Qué hace |
 |---|---|
 | `npm start` | Servidor de desarrollo en http://localhost:4200. Se recarga solo al guardar |
-| `npm test` | Pasa los tests con Vitest y se queda esperando cambios (`npm test -- --watch=false` para pasarlos una vez) |
+| `npm test` | Pasa los tests con Vitest (16 ficheros, 60 tests) y se queda esperando cambios (`npm test -- --watch=false` para pasarlos una vez) |
 | `npm run lint` | Pasa angular-eslint sobre los `.ts` y los `.html` de `src/` |
 | `npm run build` | Compila la versión de producción en `dist/backoffice/browser` |
 | `npx ng generate component components/<nombre>` | Crea un componente nuevo con el CLI del proyecto |
@@ -125,16 +121,15 @@ Las dos son iguales porque el backend sirve la API y el chat en el mismo puerto.
 |---|---|---|
 | `/login` | Iniciar sesión | Solo sin sesión |
 | `/register` | Crear una cuenta | Solo sin sesión |
-| `/` | Inicio: saludo, rol, acceso al chat y al backoffice si es admin | Con sesión |
-| `/chat` | Chat en tiempo real: general, de grupo y directo | Con sesión |
-| `/authors` | Lista de autores (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
-| `/authors/new` | Nuevo autor | Admin |
-| `/authors/:id/edit` | Editar autor | Admin |
-| `/books` | Lista de libros (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
-| `/books/new` | Nuevo libro | Admin |
-| `/books/:id/edit` | Editar libro | Admin |
+| `/dates` | La pantalla de entrada. Los Dates por bandejas (Pendientes, En curso, Cerrados, Todos): con quién, quién empieza, caducidad, cambiar de bandeja y prórroga. El admin ve todos (con filtro por usuario) y puede eliminar | Con sesión |
+| `/dates/new` | Abrir un Date: el usuario elige con quién; el admin, a los dos | Con sesión |
+| `/users` | Backoffice: lista de usuarios, 10 por página, con buscador y filtros (rol, estado, titulación y archivados). Archivar, restaurar y eliminar para siempre | Admin |
+| `/users/new` | Backoffice: nuevo usuario, con rol, activo, perfil y foto | Admin |
+| `/users/:id/edit` | Backoffice: editar usuario (sin contraseña) | Admin |
+| `/grades` | Backoffice: La Orla, los votos (quién vota a quién, A+ o F), con filtros por nota y por usuario. Cambiar la nota y eliminar | Admin |
+| `/grades/new` | Backoffice: nuevo voto | Admin |
 
-Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o al inicio (un `user` que
+Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o a los Dates (un `user` que
 intenta entrar en el backoffice).
 
 ## Estructura del proyecto
@@ -152,27 +147,26 @@ src/
       navbar/              Menú de arriba: enlaces según el rol, usuario con sesión y cerrar sesión
       login/               Iniciar sesión
       register/            Crear una cuenta
-      home/                Página de inicio para cualquier usuario con sesión
-      chat/                Chat: pestañas general, grupo y directo, mensajes y estado de la conexión
-      authors-list/        Lista de autores
-      author-card/         Tarjeta de un autor (componente hijo de la lista)
-      author-form/         Crear y editar autores
-      books-list/          Lista de libros
-      book-form/           Crear y editar libros
-      pagination/          Paginación, componente hijo de las dos listas
+      dates-list/          Los Dates por bandejas (lo que ve cada uno depende del rol)
+      date-form/           Abrir un Date
+      users-list/          Backoffice: lista de usuarios con filtros, archivar, restaurar y eliminar
+      user-form/           Backoffice: crear y editar usuarios (rol, activo, perfil y foto)
+      grades-list/         Backoffice: La Orla, la lista de votos con filtros, cambiar la nota y eliminar
+      grade-form/          Backoffice: crear un voto
+      avatar/              Foto de perfil recortada en un círculo, o las iniciales si no hay foto
+      pagination/          Paginación, componente hijo de las listas
       confirm-modal/       Ventana para confirmar antes de borrar
       view-toggle/         Botones para ver las listas en tabla o en tarjetas
     models/                Interfaces TypeScript con la forma de los datos de la API
-      author.model.ts        Author, CreateAuthor, UpdateAuthor
-      book.model.ts          Book, BookInput, CreateBook, UpdateBook, BOOK_LANGUAGES, BOOK_TAGS
-      user.model.ts          User, UserRole y las peticiones y respuestas de /auth
+      user.model.ts          User, UserRole, DEGREES, los filtros y las peticiones y respuestas de /auth y /users
+      grade.model.ts         Grade, GradeValue y las peticiones y respuestas de /grades
+      date.model.ts          StudateDate (no Date: taparía la clase Date de JavaScript), DateStatus y lo de /dates
     services/              Las únicas piezas que hablan con la API (HttpClient)
       auth.service.ts        register, login, refresh, restoreSession, logout; token y usuario en signals
-      author.service.ts      getAuthors, getAuthor, createAuthor, updateAuthor, deleteAuthor
-      book.service.ts        getBooks, getBook, createBook, updateBook, deleteBook
-      chat.service.ts        El socket: connect, joinRoom, sendMessage, los eventos del chat y los avisos del backoffice como Observables
+      user.service.ts        getDirectory, getUsers, getUser, createUser, updateUser, archiveUser, restoreUser, deleteUser
+      grade.service.ts       getGrades, createGrade, updateGrade, deleteGrade
+      date.service.ts        getDates, createDate, updateStatus, extendDate, deleteDate
     pipes/                 Formatean datos en la plantilla
-      language-name-pipe.ts  'es' -> 'Castellano'
       truncate-pipe.ts       Corta textos largos con "..."
     interceptors/
       auth.interceptor.ts  Añade el token a cada petición y lo renueva si ha caducado
@@ -181,6 +175,7 @@ src/
     utils/
       api-error.ts         Pasa un error de HttpClient a un texto para la pantalla
       remove-empty.ts      Quita los campos vacíos antes de enviar un formulario
+      image-to-data-url.ts Reduce la foto elegida a 256 x 256 y la pasa a base64 para enviarla a la API
       password-match.ts    Validador: la contraseña y su repetición coinciden
 ```
 
@@ -210,7 +205,12 @@ Cómo funciona por dentro (interceptor, guards, renovación del token) está en 
    `restoreSession()` llama a `/auth/refresh` y a `GET /users/me` para recuperar la sesión; si la cookie
    no vale, la app arranca sin sesión y `authGuard` lleva al login.
 5. "Cerrar sesión" llama a `POST /auth/logout`, que borra la cookie, y olvida el token de memoria.
-6. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol.
+6. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol. El backoffice
+   (todo lo que cuelga de `/users` y de `/grades`) lleva `authGuard` y `adminGuard`: solo entra un admin. En la barra
+   de arriba, sus enlaces van detrás de la etiqueta "Backoffice" y un `user` no los ve. Los Dates
+   (`/dates`) son para cualquier usuario con sesión y son la pantalla de entrada después del login.
+7. Si un admin desactiva o archiva a alguien que tiene la sesión abierta, su siguiente petición recibe
+   un 401 "Tu cuenta no está activa" y el interceptor le cierra la sesión.
 
 ### Dónde se guardan los tokens: localStorage o cookie HttpOnly
 
@@ -244,39 +244,20 @@ Los guards y el ocultar botones son solo comodidad: quien protege los datos es e
 comprueba el token y el rol en cada petición. Desde las herramientas del navegador se puede saltar un
 guard, pero la API seguiría respondiendo 401 o 403.
 
-## Chat
-
-El chat no usa HTTP sino un WebSocket con [socket.io](https://socket.io/): una conexión que se queda
-abierta para que el servidor pueda avisar en cuanto alguien escribe. Cómo está hecho por dentro
-(servicio, Observables, recorrido de un mensaje) está en el
-[apartado 14 de la GUIA](GUIA.md#14-chat-con-websockets); los eventos y los nombres de las salas, en
-el Contrato de [LOGS.md](LOGS.md).
-
-- **General**: la sala de todos.
-- **Grupo**: se escribe un nombre (por ejemplo `seminario-7`) y entra quien escriba el mismo.
-- **Directo**: se elige otro usuario de la lista. Solo pueden leerlo y escribir en él esos dos usuarios.
-
-Arriba, la franja **Usuarios** dice quién tiene el chat abierto ahora mismo (punto verde) y quién no
-(gris). Pulsar un usuario abre el chat directo con él.
-
-Por el mismo socket llegan eventos que **no son chat**: cuando un admin crea, edita o borra un libro o
-un autor, el servidor emite `books:changed` o `authors:changed` a todos los conectados y el chat lo
-enseña en la franja **Avisos del backoffice** ("Libro creado: Dune"). Para verlo, un usuario con el
-chat abierto y un admin guardando un libro en otra ventana.
-
-Al entrar en una sala llegan los últimos 50 mensajes. Para probarlo hacen falta dos sesiones a la vez,
-por ejemplo una ventana normal con `admin@example.com` y una de incógnito con `user@example.com`.
-
 ## Cosas de la API que hay que saber
 
-- Editar es un PUT y la API pide siempre los campos obligatorios (en los autores, el nombre y el
-  email). Un autor no tiene contraseña ni rol: quien inicia sesión es un usuario.
+- Editar es un PUT y la API pide siempre los campos obligatorios.
 - Un campo opcional que se deja vacío al editar no se borra. La API rechaza los valores vacíos, así
-  que el formulario no los envía y la API deja el valor que tenía. Los tags sí se pueden vaciar: si se
-  desmarcan todos se envía una lista vacía.
-- Borrar es un borrado lógico: la API marca el autor o el libro como borrado y deja de devolverlo, pero
-  sigue en la base de datos. Por eso un autor borrado **sigue apareciendo dentro de sus libros**.
+  que el formulario no los envía (`utils/remove-empty.ts`) y la API deja el valor que tenía.
 - Los mensajes de error de validación que devuelve la API (422) vienen en inglés, de Joi.
+- Los usuarios no se borran de golpe: primero se archivan (borrado lógico, se pueden restaurar) y solo
+  un usuario archivado se puede eliminar para siempre (borrado físico). Un admin no puede cambiarse el
+  rol, desactivarse, archivarse ni eliminarse a sí mismo (403).
+- Un Date se abre solo cuando dos usuarios se ponen A+ en La Orla, y también se puede abrir a mano. Un
+  usuario normal solo ve y cambia sus Dates; la API filtra según el token. Para elegir "con quién" usa
+  `GET /users/directory`, porque `GET /users` es del backoffice.
+- La foto de perfil se guarda en el propio usuario como texto en base64. El formulario la reduce antes
+  de enviarla para que no pase del límite de la API.
 
 ## Cómo contribuir
 

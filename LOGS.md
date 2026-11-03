@@ -1,312 +1,286 @@
 # LOGS
 
-Bitácora del frontend del Seminario 7. Tiene dos partes:
+Bitácora del frontend de Studate. Tiene dos partes:
 
-- **Tareas**: lo que hay que hacer en este repositorio, por bloques. Quien coge una tarea la marca al
-  cerrarla.
+- **Tareas**: lo que hay que hacer en este repositorio en el sprint, agrupado por ramas. Quien cierra
+  una tarea la marca.
 - **Bitácora**: lo que se ha hecho, las decisiones tomadas y qué prompts de IA se han usado.
 
-Las tareas del backend están en el LOGS.md de
-[EA-Seminari7-JWT-WebSockets-Backend](https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Backend).
+Las tareas del backend, las de estructura y las de Scrum están en el LOGS.md de
+[STUDUDATE---BACKEND](https://github.com/mariacazorla/STUDUDATE---BACKEND).
 
 ## Contrato
 
-Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se cambia en los dos
-LOGS.md.
+Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se cambia en los dos LOGS.md.
 
-- **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` y
-  `POST /auth/logout` se autentican con la cookie del refresh token. `GET /ping` y la documentación
+- **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` y `POST /auth/logout` se autentican con la cookie del refresh token. `GET /ping` y la documentación
   (`/api-docs`) también son públicas. Todo lo demás exige token.
-- **Registro**: el cuerpo es `{ name, email, password }` (contraseña de 8 caracteres como mínimo;
-  `role` no se acepta, todo usuario nuevo es `user`). Responde 201 con `{ user }` y **sin token**, 409
-  si el email ya existe o 422 si el cuerpo no es válido. El frontend redirige entonces a la página de
-  login.
-- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, user }` o 401. `user` es
-  `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña. El refresh token **no va en el
-  JSON**: se deja en la cookie `refreshToken` (HttpOnly, SameSite=Strict, Path=/auth, Max-Age de 7
-  días; Secure en producción).
-- **Refresh**: sin cuerpo. Lee el refresh token de la cookie y responde `{ token }` (un access token
-  nuevo), o 401 si no hay cookie, ha caducado o no es válida. El refresh token no cambia.
+- **Registro**: el cuerpo es `{ name, email, password }` (contraseña de 8 caracteres como mínimo; `role` no se acepta, todo usuario nuevo es `user`). Responde 201 con `{ user }` y **sin token**, 409
+  si el email ya existe o 422 si el cuerpo no es válido. El frontend redirige entonces a la página de login.
+- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, user }` o 401. `user` es `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña. El refresh token **no va en el
+  JSON**: se deja en la cookie `refreshToken` (HttpOnly, SameSite=Strict, Path=/auth, Max-Age de 7 días; Secure en producción).
+- **Refresh**: sin cuerpo. Lee el refresh token de la cookie y responde `{ token }` (un access token nuevo), o 401 si no hay cookie, ha caducado o no es válida. El refresh token no cambia.
 - **Logout**: sin cuerpo. Borra la cookie y responde 204. Después, `/auth/refresh` responde 401.
-- **Cookies y CORS**: el frontend llama a `/auth/*` con `withCredentials: true`; el backend responde
-  con `Access-Control-Allow-Credentials: true` y el origen exacto de `CORS_ORIGIN` (no vale `*`).
-- **Token**: se envía en la cabecera `Authorization: Bearer <token>`. Su payload lleva los claims `sub`
-  (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días. El
-  frontend guarda el access token solo en memoria (una signal), nunca en `localStorage` ni
-  `sessionStorage`; al recargar la página lo recupera llamando a `/auth/refresh` y después a
-  `/users/me`.
-- **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`)
-  o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol necesario.
-- **Roles**: el CRUD del backoffice (autores y libros) es solo para `admin`. El chat es para todos los
-  usuarios con sesión iniciada.
-- **Modelos**: `users`, `authors` y `books`. La autenticación vive solo en `User` (`name`, `email`,
-  `password`, `role`): los campos `password` y `role` que `Author` traía del Seminario 5 se eliminan,
-  y enviarlos al crear o editar un autor da 422.
-- **Paginación y búsqueda**: `GET /authors?page=&limit=&search=` y
-  `GET /books?page=&limit=&search=`, por defecto `page=1` y `limit=5` (máximo 100). `search` es
-  opcional y busca parcialmente, sin distinguir mayúsculas: autores por nombre/email y libros por
-  título/ISBN/descripción. Los metadatos de la respuesta se calculan sobre los resultados filtrados.
-- **Autores borrados**: un autor borrado (borrado lógico) sigue apareciendo dentro de sus libros.
-- **Chat** (extra):
-  - Conexión: `io(url, { auth: { token } })` con el access token. Si falta, es falso o ha caducado,
-    el servidor rechaza la conexión y el cliente recibe `connect_error` con el mensaje
-    `Authentication error`.
-  - Salas: `general`, `group:<nombre>` y `direct:<idA>:<idB>` (los dos ids ordenados; solo entran
-    esos dos usuarios). Cualquier otro nombre se rechaza con `chat:error`.
-  - Del cliente al servidor: `chat:join` con `{ room }` y `chat:message` con `{ room, text }` (de 1
-    a 2000 caracteres; hay que haber entrado antes en la sala).
-  - Del servidor al cliente: `chat:history` (solo a quien entra: los 50 últimos mensajes de la sala,
-    del más antiguo al más nuevo), `chat:message` (a toda la sala, también a quien lo escribió) y
-    `chat:error` con `{ message }` y `users:online` (a todos, cada vez que alguien abre o cierra el
-    chat: la lista de ids de los usuarios conectados).
-  - Un mensaje es `{ _id, room, user: { _id, name }, text, timestamp }`.
-  - `GET /users` (con sesión, cualquier rol) responde `{ users: [{ _id, name }] }`, ordenados por
-    nombre, para elegir con quién hablar en el chat directo.
-- **Avisos del backoffice** (socket.io, no son chat): cuando un admin crea, edita o borra un libro o
-  un autor, el servidor emite a todos los conectados `books:changed` o `authors:changed` con
-  `{ action: 'created' | 'updated' | 'deleted', id, name, userId }` (`name` es el título del libro o el
-  nombre del autor; `userId`, quién lo ha hecho). El cliente no envía nada: solo escucha.
-- **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde
-  `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
+- **Cookies y CORS**: el frontend llama a `/auth/*` con `withCredentials: true`; el backend responde con `Access-Control-Allow-Credentials: true` y el origen exacto de `CORS_ORIGIN` (no vale `*`).
+- **Token**: se envía en la cabecera `Authorization: Bearer <token>`. Su payload lleva los claims `sub` (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días.
+  El frontend guarda el access token solo en memoria (una signal), nunca en `localStorage` ni `sessionStorage`; al recargar la página lo recupera llamando a `/auth/refresh` y después a `/users/me`.
+- **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`) o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol
+  necesario.
+- **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
+- **Con quién abrir un Date**: `GET /users/directory` (con sesión, cualquier rol) responde `{ users: [{ _id, name, degree?, photo? }] }`: los demás usuarios
+  de rol `user` activos, ordenados por nombre.
+- **Usuario**: `{ _id, name, email, role, birthDate?, degree?, lookingFor?, bio?, photo?, active, deleted, deletedAt?, createdAt, updatedAt }`, nunca con
+  contraseña. `photo` es una imagen PNG o JPG en base64 (`data:image/...;base64,...`, 200 000 caracteres como mucho).
+- **Usuarios inactivos y archivados**: no pueden iniciar sesión ni renovar el token (401 con el mensaje de siempre). Lo hace el prehook del modelo.
+  Si ya tenían sesión, cualquier petición con su token responde 401 `{ message: 'Tu cuenta no está activa' }` y el frontend cierra la sesión.
+- **Gestión de usuarios** (solo `admin`):
+  - `GET /users?page=&limit=&search=&role=&active=&degree=&archived=` responde `{ users, total, page, pages }`, ordenados por nombre. `search` busca en
+    nombre y email; `role` es `user` o `admin`; `active` es `true` o `false`; `degree` es una titulación entera; `archived=true` lista solo los
+    archivados (por defecto no salen). 400 si un filtro no es válido.
+  - `GET /users/:userId` responde `{ user }`, también si está inactivo o archivado; 404 si no existe.
+  - `POST /users` con `{ name, email, password, role?, active?, birthDate?, degree?, lookingFor?, bio?, photo? }` responde 201 `{ user }`; 409 si el
+    email existe, 422 si el cuerpo no vale.
+  - `PUT /users/:userId` con lo mismo salvo `password` (`name` y `email` obligatorios) responde 200 `{ user }`; 404 si no existe o está archivado.
+    `photo: ''` quita la foto.
+  - `POST /users/:userId/archive` (borrado lógico) responde 200 `{ user }` con `deleted: true`; 404 si no existe o ya estaba archivado.
+  - `POST /users/:userId/restore` responde 200 `{ user }`; 404 si no existe o no estaba archivado.
+  - `DELETE /users/:userId` (borrado físico) responde 204. Solo con usuarios archivados: si no, 409 `{ message: 'Archiva el usuario antes de eliminarlo' }`.
+  - Un admin no puede cambiarse su propio rol, desactivarse, archivarse ni eliminarse: 403 `{ message: 'No puedes hacer esto con tu propio usuario' }`.
+  - Al eliminar un usuario para siempre se borran también sus votos de La Orla y sus Dates.
+- **Voto de La Orla (Grade)**: `{ _id, from, to, value, createdAt, updatedAt }`. `from` (quien vota) y `to` (a quien) llegan como
+  `{ _id, name, email, photo? }`, también si el usuario está inactivo. `value` es `'A+'` o `'F'`. Un solo voto por pareja (from, to).
+- **Votos de La Orla** (solo `admin`):
+  - `GET /grades?page=&limit=&value=&user=` responde `{ grades, total, page, pages }`, primero los más nuevos. `user` deja los votos en los que
+    ese usuario vota o es votado. 400 si un filtro no es válido.
+  - `GET /grades/:gradeId` responde `{ grade }`; 404 si no existe.
+  - `POST /grades` con `{ from, to, value }` responde 201 `{ grade }`; 409 si la pareja ya tiene voto (`{ message: 'Este usuario ya ha votado ese perfil' }`); 422 si `from` y `to` son el mismo usuario
+    (`{ message: 'Un usuario no se puede votar a sí mismo' }`) o el cuerpo no vale; 404 si `from` o `to` no existen.
+  - `PUT /grades/:gradeId` con `{ value }` responde 200 `{ grade }`. `DELETE /grades/:gradeId` responde 204 (borrado físico).
+  - Si al crear un A+ o al cambiar un voto a A+ ya existe el A+ contrario, se abre un Date entre los dos (si no lo había ya).
+- **Date**: `{ _id, users, status, firstTurn, expiresAt, extended, createdAt, updatedAt }`. `users` son los dos usuarios como `{ _id, name, email,
+  photo? }`; `status` es `'pending'` (Pendiente), `'ongoing'` (En curso) o `'closed'` (Cerrado); `firstTurn` es el id del usuario al que le toca
+  escribir primero (sorteado); `expiresAt` es 24 horas después de abrirse; `extended` dice si ya se usó la prórroga. Un solo Date por pareja.
+- **Dates** (cualquier usuario con sesión; el admin ve todos y un usuario normal solo los suyos):
+  - `GET /dates?page=&limit=&status=&user=` responde `{ dates, total, page, pages }`, primero los más nuevos. `user` solo lo usa el admin.
+  - `GET /dates/:dateId` responde `{ date }`; 404 si no existe o es de otros.
+  - `POST /dates` con `{ users: [idA, idB] }` responde 201 `{ date }`; 403 si un usuario normal no es uno de los dos; 409 si ya hay un Date entre
+    ellos (`{ message: 'Ya hay un Date entre estos dos usuarios' }`); 404 si alguno no existe; 422 si no son dos ids distintos.
+  - `PUT /dates/:dateId` con `{ status }` responde 200 `{ date }`; 404 si no existe o es de otros.
+  - `POST /dates/:dateId/extend` suma 24 horas a `expiresAt` y pone `extended: true`; 409 si ya se usó
+    (`{ message: 'La prórroga de este Date ya se ha usado' }`).
+  - `DELETE /dates/:dateId` (solo admin) responde 204.
 
 ## Tareas
 
-### Estructura
+### Sprint 1 (mínimo 1)
 
-- [x] `structure`: ramas `develop` y de objetivo, identidad del repositorio (nombre, README con el
-  stack tecnológico), CONTRIBUTING.md, este LOGS.md y angular-eslint
-- [x] Resolver los 5 errores que angular-eslint encuentra en el código heredado del S6 (ver la
-  bitácora)
+#### Estructura (`structure`)
 
-### Bloque D: autenticación en Angular
+- [x] Crear los dos repositorios a partir del Seminari 7 (README y ramas) · Diego
+- [x] Quitar autores, libros y chat del frontend · Miguel Ángel
 
-- [x] Pantallas de registro y de login con formularios reactivos y validación; al registrarse se
-  redirige a la página de login
-- [x] Quitar de los formularios y modelos de autor los campos `password` y `role` cuando el backend
-  los elimine (contrato)
-- [x] `AuthService`: register, login, logout, guardar el token (y documentar por qué localStorage o
-  cookie HttpOnly, con los riesgos de cada una) y el usuario con sesión en una signal
-- [x] Interceptor HTTP: añade `Authorization: Bearer` a cada petición; si llega un 401, limpia la sesión
-  y lleva al login (o renueva el token con el refresh, si da tiempo)
-- [x] Guard `CanActivate` en las rutas protegidas; enseñar u ocultar acciones según el rol
+#### Backoffice (`backoffice`)
 
-### Bloque E: chat (extra)
+- [x] Lista de usuarios paginada con búsqueda y filtros · Miguel Ángel
+- [x] Formulario de usuario: crear, editar, rol y activo · Miguel Ángel
+- [x] Archivar, restaurar y eliminar desde el backoffice · Miguel Ángel
+- [x] Acceso solo para admin (login y guards) · Miguel Ángel
+- [x] Tests del frontend (dentro de cada rama) · Miguel Ángel
+- [x] README del frontend (al cerrar cada rama) · Miguel Ángel
 
-Extra: el profesor lo marcó como no prioritario y seguramente no entra en la demo. Es la pareja del
-bloque B del backend. Se mantiene simple: lo importante es poder explicar el flujo de un mensaje.
+#### La Orla (`grades`)
 
-- [x] Servicio que encapsula `socket.io-client` y se conecta enviando el token
-- [x] Los eventos del socket expuestos como Observables
-- [x] Componente de chat con los tres niveles: general, salas de grupo y directo (eligiendo el
-  usuario); historial al entrar, lista de mensajes, envío y estado de la conexión
-- [x] Limpieza en `OnDestroy` (unsubscribe y desconexión) para no dejar conexiones duplicadas
-- [x] URL del servidor de sockets en `environments`
+- [x] Pantallas de Grade · María
 
-### Bloque F: usar la paginación del servidor
+#### Dates (`dates`)
 
-- [x] Adaptar los services a la nueva forma de la respuesta de los listados
-- [x] Las listas piden cada página a la API en lugar de trocear la lista en memoria; el componente
-  `app-pagination` se reutiliza tal cual
-- [x] Hacer que el buscador funcione junto con la paginación
-
-### Ejercicio del seminario 7: tokens seguros y más eventos de socket
-
-- [x] Access token solo en una signal de `AuthService`, nunca en `localStorage` ni `sessionStorage`
-- [x] Llamadas a `/auth` con `withCredentials`; el refresh token vive en la cookie HttpOnly
-- [x] Al recargar la página, llamar a `/auth/refresh` al arrancar para recuperar la sesión; si la
-  cookie no vale, al login
-- [x] Logout contra `POST /auth/logout`
-- [x] Escuchar los eventos `books:changed` y `authors:changed` y enseñarlos en el chat
-
-### Extra opcional
-
-- [ ] Que el rol `user` pueda ver la lista de libros (solo lectura), para que tenga algo más que el chat. Va después del bloque D y necesita su pareja en el backend
+- [x] Pantallas de Date · María
 
 ## Bitácora
 
-### 2026-10-03 · Punto de partida y `structure`
+La bitácora del Seminario 7, de donde viene este código, se conserva en el tag `seminari7-base`
+(`git show seminari7-base:LOGS.md`).
 
-- El repositorio nace como copia del frontend del Seminario 6, que ya cubría CRUD contra la API,
-  formularios reactivos, validación y routing (explicado en GUIA.md).
-- Se crea `develop` como rama de integración; `main` queda para presentar.
-- Identidad: el paquete pasa a llamarse `ea-seminari7-jwt-websockets-frontend` y el README se reescribe
-  con el stack tecnológico. El nombre interno del proyecto en `angular.json` sigue siendo `backoffice`:
-  es un identificador del CLI ligado a la carpeta de salida (`dist/backoffice`) y cambiarlo no aporta
-  nada.
-- El `.gitignore` heredado ignoraba todos los `.md` salvo README, GUIA y EJERCICIO (reglas de notas
-  personales). Se quita esa regla para que CONTRIBUTING.md y LOGS.md entren en el repositorio. Se borra
-  `src/.gitigonore`, un fichero vacío con el nombre mal escrito.
-- Textos que describían el borrado antiguo (el modal de borrar autor y el README decían que los libros
-  se quedaban sin el autor): ahora dicen que el autor sigue apareciendo en sus libros, que es lo que
-  hace el backend con el borrado lógico.
-- Linter: se añade angular-eslint 21 (la versión 22 es para Angular 22; `ng add` instala la última por
-  defecto y hay que fijar la 21). Comparado con Oxlint en el backend: Oxlint es mucho más rápido y no
-  pide configuración, pero solo mira TypeScript; angular-eslint también revisa las plantillas HTML con
-  reglas de Angular y de accesibilidad. En el código heredado encuentra 5 errores que Oxlint no habría
-  visto:
-  - `author-form.ts`: la variable `confirmPassword` se saca del formulario para no enviarla, pero no se
-    usa, y la regla `no-unused-vars` lo marca.
-  - `confirm-modal.html` (4 errores): el fondo y la ventana del modal escuchan `(click)` sin ser
-    elementos con foco ni tener evento de teclado, así que con el teclado no se puede cerrar el modal
-    pulsando fuera.
-- Tests: 7 ficheros y 20 tests, todos en verde.
+### 2026-11-03 · Punto de partida y `structure`
 
+- El repositorio nace como copia del frontend del ejercicio del Seminario 7. Antes de tocar nada se guarda
+  ese código en el tag `seminari7-base`.
+- Identidad: el paquete pasa a llamarse `studate-frontend`, la pestaña del navegador dice "Studate", el
+  README cuenta qué es Studate y enlaza a los repos nuevos, y GUIA.md avisa de que sus ejemplos son del
+  seminario (siguen en el tag).
+- Este LOGS.md empieza de cero con las tareas del Sprint 1. Del contrato del seminario solo se queda la
+  autenticación, que no cambia.
+- Prompt de IA usado: «Lo mismo que en el backend: esto es el frontend del seminario 7 copiado tal cual. Hay
+  que limpiarlo para Studate [...] Dime el plan de acción de cómo lo harías.» (conversación completa en
+  `prompts/sprint-1.md`, fuera del repositorio).
 
-### 2026-10-04 · Corrección de errores de angular-eslint
+### 2026-11-03 · Limpieza: fuera autores, libros y chat
 
-- En `author-form.ts`, el payload ahora incluye explícitamente los campos del autor y omite `confirmPassword`.
-- En `confirm-modal.html`, el fondo y la ventana responden a Escape; la ventana se identifica como diálogo modal accesible y el clic interior no se propaga al fondo.
-- Verificación: `npx ng lint` sin errores y `npx ng test` con 20 tests en verde.
+- Se borran los componentes `authors-list`, `author-card`, `author-form`, `books-list`, `book-form` y `chat`,
+  los services de autores, libros y chat (con sus tests), los modelos `author.model.ts` y `book.model.ts` y el
+  pipe `languageName`. Se desinstala `socket.io-client` y desaparece `socketUrl` de `environment.ts`.
+- Se quedan, porque los vamos a usar en las pantallas de usuarios: `pagination`, `confirm-modal`,
+  `view-toggle`, el pipe `truncate` y las utilidades de `utils/`. Login, registro, interceptor y guards no cambian.
+- Rutas: solo inicio, login y registro (las de Studate llegan en sus ramas). El navbar ya no tiene enlaces de
+  backoffice ni de chat y la marca dice "Studate". La página de inicio saluda y explica lo que vendrá.
+- Los tests que usaban `/books` o `/authors` como URL de ejemplo (login, guard e interceptor) pasan a usar
+  `/users`; el test de `app` que comprobaba los enlaces del backoffice y del chat se cambia por uno que
+  comprueba que con sesión ya no salen login y registro.
+- README: fuera la sección del chat, las pantallas, ficheros y dependencias que ya no existen.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde: 7 ficheros y 28
+  tests (en el seminario eran 65; los que faltan eran de autores, libros y chat). Con la API y `ng serve`
+  arrancados, en el navegador: el login de `admin@example.com` lleva a la página de inicio con el saludo; el único
+  error de consola es el 401 de `/auth/refresh` al abrir la app sin sesión, que es lo esperado.
+- Prompt de IA usado: el mismo de la limpieza del repositorio (ver la entrada anterior).
 
-### 2026-10-04 · Adaptación de los services a la paginación
+### 2026-11-03 · Lista de usuarios paginada con búsqueda y filtros
 
-- Los services de autores y libros aceptan `page` y `limit` y tipan la respuesta paginada con `AuthorsPage` y `BooksPage`. El selector de autores del formulario de libros pide hasta 100.
-- Verificación: `npx ng lint` sin errores y `npx ng test` con 22 tests en verde.
+- Antes de empezar se revisa cómo pagina el backend (`skip` y `limit` con `countDocuments`, respuesta `{ users, total, page, pages }`)
+  y se copia el contrato de la gestión de usuarios a este LOGS.md.
+- Pantalla `/users` (`components/users-list`), solo para admin (`authGuard` + `adminGuard`), con el mismo patrón que la lista de libros
+  del seminario: un `Subject` con `switchMap` pide cada página a la API y cancela la anterior si llega otra (por ejemplo, al escribir en
+  el buscador), y el componente `app-pagination` se reutiliza tal cual.
+- 10 usuarios por página. Filtros: buscador (nombre o email), rol, estado (activos o inactivos), titulación y "Ver archivados".
+  Al cambiar un filtro se vuelve a la página 1. El de titulación no existía en la API: se añadió en la rama `users` del backend.
+- `UserService.getUsers` solo envía los filtros que tienen valor (con `HttpParams`). El modelo `User` gana los campos del perfil y del
+  estado, y hay una lista `DEGREES` con las titulaciones de la EETAC para el filtro (y luego el formulario).
+- Componente nuevo `app-avatar`: la foto de perfil recortada en un círculo (`object-fit: cover`) o, si no hay foto, las iniciales sobre
+  un color que sale del nombre. Se usará en todas las listas.
+- `styles.css`: pastillas de estado (`.pill`) y tablas con la clase `stack`, que en el móvil se ven como tarjetas.
+- Navbar: enlace "Usuarios" solo para admin; la página de inicio tiene un botón "Gestionar usuarios".
+- Tests nuevos: `user.service.spec.ts` (que no se envían los filtros vacíos y sí los que tienen valor) y `users-list.spec.ts` (pinta una
+  fila por usuario con su estado, pide la página elegida y vuelve a la 1 con los filtros). El de `app` comprueba que el admin ve
+  "Usuarios" y un `user` no.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (9 ficheros, 34 tests). En el navegador con la
+  API y el seed: como admin, 12 usuarios en 2 páginas, los inactivos en gris, y "Ver archivados" enseña a Sara y Dani.
+- Prompt de IA usado: «Empezamos por la lista de usuarios paginada con búsqueda y filtros. Primero quiero ver cómo está montada la
+  paginación en el backend [...] quiero 10 usuarios por página y algunos filtros, los más típicos. ¿Qué filtros me sugieres?»
 
-### 2026-10-04 · Listados paginados desde el servidor
+### 2026-11-03 · Formulario de usuario: crear, editar, rol y activo
 
-- Autores y libros solicitan cada página al servidor y muestran los metadatos de paginación usando `app-pagination`.
-- Verificación: `npx ng lint` sin errores y `npx ng test` con 25 tests en verde.
+- Pantallas `/users/new` y `/users/:id/edit` (`components/user-form`), solo para admin, con la forma del formulario de autores del
+  seminario: formulario reactivo con validadores, `removeEmpty` antes de enviar, modo crear o editar según haya `:id` y los errores de la
+  API con `apiErrorMessage`.
+- Es como el registro, pero el admin elige el rol, si el usuario está activo y el perfil (titulación de la lista `DEGREES`, qué busco, bio
+  con contador de 500, fecha de nacimiento y foto). La contraseña y su repetición (validador `passwordMatch`) solo se piden al crear;
+  desde el backoffice no se cambia la contraseña de nadie.
+- Foto de perfil: se elige un PNG o JPG y `utils/image-to-data-url.ts` lo recorta en un cuadrado de 256 x 256 en un `<canvas>` y lo pasa a
+  JPG en base64. Una foto del móvil de varios MB se queda en pocos KB (la de la prueba, 3747 caracteres). Se enseña ya recortada en el
+  círculo de `app-avatar` antes de guardar, y "Quitar foto" envía `photo: ''`.
+- Si el admin se edita a sí mismo, el rol y el activo salen deshabilitados con un aviso; además no se envían (la API respondería 403).
+- La lista tiene ahora "Nuevo usuario" y un botón "Editar" en cada fila (no en los archivados: hay que restaurarlos antes).
+- Problema encontrado: un usuario desactivado seguía pudiendo usar la API con su token hasta que caducaba. Se arregla en el backend
+  (`VerifyToken` comprueba que la cuenta sigue activa y responde 401); aquí no hay que tocar nada, porque el interceptor ya cierra la
+  sesión con ese 401.
+- Tests nuevos en `user-form.spec.ts`: al crear pide contraseña y que coincida, al crear envía el rol y el activo, al editar no pide
+  contraseña y hace un PUT sin ella, con el propio usuario el rol y el activo están bloqueados, y quitar la foto envía `photo: ''`.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (10 ficheros, 39 tests). En el navegador: se crea
+  "Paula Ruiz" con titulación, qué busco y una foto PNG; la foto se ve recortada antes de guardar, el usuario sale en la lista y en MongoDB
+  la foto está guardada como JPG en base64.
+- Prompt de IA usado: «Ahora el formulario de usuario: crear, editar, rol y activo. Es básicamente el register que ya tenemos, pero hecho
+  bien y adaptado a los roles. Lo de activo es importante [...] Dame el plan de acción.»
 
-### 2026-10-04 · Búsqueda con paginación del servidor
+### 2026-11-03 · Archivar, restaurar y eliminar desde el backoffice
 
-- Los listados envían `search` a la API; al cambiar el término vuelven a la primera página y el
-  servidor filtra antes de paginar. Las peticiones anteriores se cancelan para evitar resultados
-  desactualizados.
-- La API admite búsqueda parcial sin distinguir mayúsculas en autores (nombre/email) y libros
-  (título/ISBN/descripción), aplicándola antes de contar y paginar.
-- Verificación: `npx ng lint` sin errores, `npx ng test` con 27 tests en verde; el backend pasa
-  `npm run lint` y `npm run build`.
-- Prompt: «Hacer que el buscador funcione junto con la paginación del servidor en autores y libros;
-  agregar búsqueda al backend y al frontend para que los metadatos de paginación correspondan a los
-  resultados filtrados».
+- Soft delete primero: en la lista normal cada usuario tiene "Archivar", que abre el `confirm-modal` del seminario ("no podrá
+  iniciar sesión; podrás restaurarlo desde Ver archivados"). En "Ver archivados" salen "Restaurar" (sin modal: no se pierde nada) y
+  "Eliminar para siempre" (hard delete), con el modal "¿Estás seguro de que quieres eliminar este usuario?" que avisa de que no se puede
+  deshacer.
+- Un solo modal para las dos acciones: la signal `pending` guarda el usuario y la acción, y los textos del modal son `computed` que
+  cambian según la acción.
+- En la fila del admin con sesión no sale "Archivar" (la API respondería 403). Si la API responde 409 o 403, se enseña su mensaje.
+- Después de cada acción se recarga la página actual; si el usuario era el último de su página, se pasa a la anterior, como hacía la
+  lista de libros del seminario.
+- `UserService`: `archiveUser` y `restoreUser` (POST) y `deleteUser` (DELETE).
+- Arreglo: el test del formulario navegaba a `/users` sin que el router de prueba tuviera esa ruta y Vitest avisaba de 3 errores no
+  controlados (aunque los tests pasaban). Se le da una ruta vacía `users` y desaparecen.
+- Tests nuevos: los tres métodos del service; en la lista, archivar después de confirmar recarga la página, en archivados salen
+  "Restaurar" y "Eliminar para siempre" y el modal de eliminar avisa, y en la fila propia solo sale "Editar".
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde y sin avisos (10 ficheros, 43 tests). En el
+  navegador con el seed recién hecho: archivar a Clara con el modal, verla en archivados, eliminarla para siempre con el modal de "¿Estás
+  seguro?" (en MongoDB ya no está) y restaurar a Sara (en MongoDB vuelve a `deleted: false`).
+- Prompt de IA usado: «Ahora archivar, restaurar y eliminar desde el backoffice [...] Cuando quiera eliminar para siempre, que me salga un
+  modal de "¿Estás seguro de que quieres eliminar esto?" y, si le doy, se elimina. ¿Cómo lo harías? Plan de acción.»
 
-### 2026-10-05 · Autenticación en Angular (Bloque D)
+### 2026-11-03 · Backoffice solo para admin y adaptado a Studate
 
-- `AuthService` con `register`, `login`, `refresh`, `logout` y `getToken`. El usuario con sesión está en
-  una signal privada que se expone de solo lectura, con `isLoggedIn` e `isAdmin` como `computed`. Los
-  tokens y el usuario se guardan en `localStorage` y se recuperan al recargar la página.
-- `authInterceptor` (funcional, registrado con `withInterceptors`): añade `Authorization: Bearer` a todas
-  las peticiones salvo las de `/auth/*`. Si llega un 401 con "El token ha caducado", renueva el token con
-  `POST /auth/refresh` y repite la petición una vez; si el refresh falla, o el 401 es por otro motivo,
-  cierra la sesión y lleva al login. El resto de errores (403, 422...) llegan al componente sin tocar la
-  sesión.
-- Guards funcionales: `authGuard` (sin sesión, al login con `returnUrl`), `adminGuard` (un `user` vuelve
-  al inicio) y `guestGuard` (con sesión no se ve el login ni el registro). Van ruta a ruta en
-  `app.routes.ts`: el backoffice entero es `[authGuard, adminGuard]`.
-- Pantallas nuevas: login (vuelve a `returnUrl` si es una ruta de la app), registro (nombre, email,
-  contraseña y repetirla; al terminar lleva al login con el aviso "Cuenta creada") e inicio (saludo, rol
-  y accesos al backoffice si es admin). La barra de navegación enseña Autores y Libros solo a un admin,
-  y el usuario con su rol y "Cerrar sesión" a quien tiene sesión.
-- El autor pierde `password` y `role` en el modelo y en el formulario. El validador de contraseñas
-  repetidas pasa a `utils/password-match.ts` y lo usa el registro. La etiqueta de rol de la lista y de la
-  tarjeta pasa a ser una etiqueta de estado (ACTIVO o INACTIVO) con el mismo `ngStyle` y el pipe
-  `uppercase`, para que los ejemplos de la GUIA sigan teniendo código real; la columna "Activo" de la
-  tabla queda dentro de esa etiqueta.
-- Decisiones:
-  - localStorage y no cookie HttpOnly: encaja con el contrato (los tokens llegan en el JSON) y no pide
-    cambios en el backend. Riesgos de las dos opciones explicados en el README.
-  - Si dos peticiones caducan a la vez, cada una renueva por su cuenta. Es correcto porque el refresh es
-    sin estado y el refresh token no cambia; una cola de peticiones complicaría el código sin ganar nada
-    aquí.
-  - La pantalla de inicio existe porque un `user` no tiene nada que hacer en el backoffice; ahí colgará
-    el chat.
-- Documentación: README (cómo entrar, pantallas con quién puede entrar, estructura y el apartado
-  Autenticación con localStorage frente a cookie) y GUIA (apartado 13, "Autenticación: interceptor y
-  guards"; los ejemplos de `ngStyle`, `uppercase` y del formulario reactivo ya no usan el rol ni la
-  contraseña del autor).
-- Verificación: `npx ng lint` sin errores, `npx ng test` con 51 tests en verde (12 ficheros; nuevos los de
-  `AuthService`, el interceptor, los guards y el login) y `npx ng build` correcto. Prueba de punta a punta
-  en un navegador (Playwright y Chromium) contra el backend real con tokens de 20 segundos: 27
-  comprobaciones correctas, entre ellas el registro con aviso de contraseñas distintas y de email
-  repetido, el login fallido, que un `user` no ve ni puede abrir el backoffice, el cierre de sesión, que
-  el admin vuelve a la URL que pedía, crear un autor sin contraseña, la renovación automática (`401`,
-  `refresh 200` y la misma petición `200`, sin pasar por el login) y que con el refresh token roto se
-  cierra la sesión.
+- Con la zona de usuarios hecha, se repasa el backoffice entero para que solo lo use un admin: todas sus rutas (`/users`, `/users/new`,
+  `/users/:id/edit`) llevan `authGuard` y `adminGuard`, y en la barra de arriba sus enlaces van detrás de la etiqueta "Backoffice", que un
+  `user` no ve. El registro se queda: es por donde entra la gente normal; el backoffice es una zona aparte dentro de la misma app.
+- Después del login, un admin va directo a `/users` y un `user` a la página de inicio, que le explica que el backoffice es solo para
+  administradores. Con `returnUrl` se respeta a dónde iba.
+- Aspecto de Studate (el del mockup), sin cambiar la estructura del seminario: la paleta en variables de `styles.css` (el índigo un poco más
+  vivo, el coral de la marca y grises con un toque de azul), barra oscura con "Stu**date**" y la página actual subrayada en coral, radios de 8
+  px y un contorno visible al moverse con el teclado.
+- Móvil: la barra hace salto de línea y la sesión baja a su propia fila; en la lista de usuarios cada filtro ocupa toda la fila. Problema
+  encontrado al probarlo con el ancho de un móvil: el select de titulaciones era más ancho que la pantalla y salía scroll horizontal; se
+  limita su ancho.
+- Tests: el de login comprueba que un admin va a `/users` y uno nuevo que un `user` va al inicio. Los specs dejan de usar la contraseña del
+  seminario (`seminari7`) y usan la del seed nuevo.
+- README: usuarios de ejemplo, pantallas del backoffice, estructura del proyecto (componentes, service y utilidad nuevos), qué protege cada
+  guard y las reglas de la API que hay que saber (archivado, eliminar y foto).
+- Pruebas del bloque `backoffice`: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (10 ficheros, 44 tests). En el
+  navegador, con el seed recién hecho: login de admin (va a Usuarios), lista con filtros y archivados, crear un usuario con foto, archivar,
+  eliminar para siempre con el modal, restaurar, y la misma lista con 390 px de ancho (tarjetas, sin scroll horizontal).
+- Prompt de IA usado: «Ahora que ya tenemos la zona de usuarios, esto lo tienen que administrar los administradores. Hay que rehacer el
+  backoffice bien hecho: login y guards solo para admin, y adaptarlo a los modelos nuevos. Plan de acción.»
 
-### 2026-10-05 · Chat (Bloque E)
+### 2026-11-03 · Pantallas de La Orla (Grade)
 
-- `ChatService` encapsula `socket.io-client`: un solo socket para toda la app, conectado con el token
-  en el handshake. Los eventos (`chat:history`, `chat:message`, `chat:error`, conexión y errores de
-  conexión) se exponen como Observables a partir de `Subject`; el estado de la conexión es un
-  `BehaviorSubject`. También pide `GET /users` para el chat directo.
-- Componente `Chat` en `/chat` (con `authGuard`, para cualquier rol) con pestañas General, Grupo (se
-  escribe el nombre del grupo) y Directo (se elige el usuario; la sala se forma con los dos ids
-  ordenados). Muestra el historial al entrar, los mensajes de la sala activa, el envío y si está
-  conectado. En `ngOnDestroy` cancela todas las suscripciones y cierra el socket.
-- `socketUrl` en `environment.ts`. Enlace "Chat" en la barra para cualquier usuario con sesión.
-- Revisión antes de presentar:
-  - **Fallo corregido**: el socket se conectaba con el token guardado, que no pasa por el
-    interceptor. Si había caducado (por ejemplo, tras 15 minutos sin hacer peticiones), el chat se
-    quedaba en "No se pudo conectar al chat: Authentication error". Ahora `auth` es una función que
-    lee siempre el token más reciente y, ante `Authentication error`, el servicio renueva el token
-    con `refresh()` y reconecta una vez; si no puede renovarlo, cierra la sesión.
-  - Se quita el método `listen()` de `ChatService`, que no se usaba.
-  - La página de inicio enlaza al chat (todos los roles tienen algo que hacer ahí).
-  - Tests nuevos: `ChatService` (`getUsers`, no conecta sin token, no emite sin conexión) y el
-    componente con un `ChatService` falso (entra en `general` al conectar, nombre del chat directo
-    con los ids ordenados, sin chat consigo mismo, solo los mensajes de la sala activa, errores del
-    servidor, desconexión al salir).
-  - Prettier en los ficheros del chat. README (stack, configuración, pantallas, estructura y un
-    apartado Chat), GUIA (apartado 14, "Chat con WebSockets") y el Contrato del chat concretado en
-    los dos LOGS.md.
-- Verificación: `npx ng lint` sin errores, `npx ng test` con 60 tests en verde (14 ficheros) y
-  `npx ng build` correcto. En el navegador (Playwright y Chromium), con el backend real y tokens de 20
-  segundos: chat con dos usuarios a la vez (mensajes en tiempo real en la sala general y en la
-  directa, historial al entrar), entrar en el chat con el token caducado conecta renovándolo, y con el
-  refresh token roto lleva al login; 11 comprobaciones correctas. La prueba completa de autenticación
-  del bloque D se repite sin fallos (27 comprobaciones).
+- El mockup de la pantalla ya estaba hecho y validado (la pantalla "La Orla" del artifact del backoffice): se implementa tal cual.
+- `/grades` (`components/grades-list`), solo admin: tabla con quién vota y a quién (con `app-avatar`), la nota (A+ en verde, F en rojo, con
+  class binding), la fecha (pipe `date`) y las acciones "Cambiar a F/A+" (PUT, sin confirmación porque se puede volver a cambiar) y
+  "Eliminar" (con `confirm-modal`). Filtros por nota y por usuario, 10 por página, mismo patrón `Subject` + `switchMap` que los usuarios.
+- `/grades/new` (`components/grade-form`): quién vota, a quién y la nota. En los selects solo salen los usuarios activos de rol `user`, y
+  un validador de grupo (`differentUsersValidator`, como `passwordMatch`) no deja votarse a uno mismo. Un 409 (pareja repetida) enseña el
+  mensaje de la API.
+- Responsive desde el principio: la tabla lleva la clase `stack` y en el móvil cada voto es una tarjeta; los filtros ocupan toda la fila.
+- El bloque `.person` (foto, nombre y email) se usaba ya en dos pantallas: pasa de los `.css` de cada componente a `styles.css`.
+- `grade.model.ts` y `GradeService` (`getGrades`, `createGrade`, `updateGrade` y `deleteGrade`). Contrato de Grade copiado del backend.
+- Navbar: "La Orla" en la zona del backoffice; la página de inicio del admin tiene el acceso.
+- Tests nuevos: service (filtros, crear, cambiar nota y eliminar), lista (pinta el voto, cambia A+ a F y recarga, filtra por nota desde la
+  página 1 y elimina tras confirmar) y formulario (no deja votarse a sí mismo, pide solo usuarios activos de rol user y envía el voto).
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (13 ficheros, 52 tests). En el navegador: la
+  lista con los 25 votos del seed en 3 páginas; en el formulario, el aviso al elegir el mismo usuario en los dos lados y un voto nuevo de
+  Clara a Pau que aparece el primero; y la misma lista con 390 px de ancho (tarjetas).
+- Prompt de IA usado: «Ahora las pantallas de La Orla (Grade). Antes de programar, hazme un mockup para ver cómo quedaría esta pantalla.» y
+  «Y si luego hay que usarlo desde el teléfono, que esta pantalla sea responsive, que se vea bien en el móvil.»
 
-### 2026-10-05 · Usuarios conectados en el chat
+### 2026-11-03 · Pantallas de Date
 
-- Recomendación de los profesores: ver quién está activo. `ChatService` escucha `users:online` y lo
-  expone como `onlineUsers$` (un `BehaviorSubject`, que se vacía al desconectarse). El chat muestra una
-  franja "Usuarios" con un punto verde o gris, el mismo que el indicador "Conectado": uno mismo primero
-  como "(tú)", después los conectados y luego el resto por nombre, y cuántos hay en el chat. Pulsar un
-  usuario abre el chat directo con él, y el desplegable del directo marca "en el chat".
-- Conectado quiere decir "con la página del chat abierta", porque el socket solo vive ahí.
-- Verificación: `npx ng lint` sin errores, `npx ng test` con 63 tests en verde (nuevos: orden y
-  contador de la lista, abrir el directo desde la lista, `onlineUsers$` empieza vacío) y `npx ng
-  build` correcto. En el navegador con dos usuarios, 13 comprobaciones correctas: aparece y
-  desaparece al entrar y salir del chat, cerrar una de dos pestañas no lo desconecta, el contador
-  coincide con los puntos verdes, los conectados van primero y el clic abre el directo.
+- Como en La Orla, el mockup ya estaba validado (pantalla "Dates" del artifact, con la vista del admin y la de "Mis Dates" del usuario) y se
+  hace responsive desde el principio (tabla `stack`).
+- `/dates` (`components/dates-list`) es la pantalla de entrada para todos después del login: la ruta `''` redirige allí y desaparece la página
+  de inicio, que ya no tenía uso. Pestañas con las bandejas del blog (Pendientes, la de entrada, En curso, Cerrados y Todos), estado con un
+  select que cambia de bandeja, caducidad (pipe `date`, con "caducado" si ya pasó), prórroga (+24 h, el botón se deshabilita cuando se usa y
+  un 409 enseña el mensaje de la API) y paginación.
+- Lo que se ve depende del rol (la API ya filtra por el token):
+  - El admin ve "Dates": las dos personas de cada pareja, en negrita la que escribe primero, filtro por usuario y "Eliminar" con el modal.
+  - Un usuario ve "Mis Dates": "Con" (la otra persona), "Empieza" ("Tú" o su nombre) y sin eliminar.
+- `/dates/new` (`components/date-form`): el admin elige a los dos usuarios (validador de grupo para que no sean el mismo); un usuario normal
+  elige solo "con quién", y él es el otro. Para la lista, el usuario normal no puede usar `GET /users` (es del backoffice): se añadió
+  `GET /users/directory` en el backend (rama `dates`).
+- El modelo se llama `StudateDate` y no `Date`: con `Date` como interfaz, `new Date()` dejaría de ser una fecha en los componentes que la usan
+  (en `dates-list` se usa para saber si un Date ha caducado). En el backend pasa lo mismo con `DateModel`.
+- Navbar: "Dates" para cualquiera con sesión, delante de la zona del backoffice. Después del login todos van a `/dates`. La ayuda del formulario
+  de votos ("si los dos se han dado A+, se abre un Date") se añade ahora, que ya es verdad.
+- Tests nuevos: service (filtro de estado, abrir, cambiar estado, prórroga y eliminar), lista (un `user` ve con quién y quién empieza y no tiene
+  "Eliminar"; el admin ve a los dos y "Eliminar"; cambiar de pestaña pide desde la página 1; el 409 de la prórroga enseña el mensaje) y formulario
+  (el `user` usa el directorio y es uno de los dos; el admin no puede elegir dos veces al mismo). Se actualizan los de login y app.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (16 ficheros, 60 tests). En el navegador: con una
+  sesión abierta de antes del seed, la API responde 401 y la app lleva al login (el arreglo de usuarios inactivos funcionando); como `user`, solo su
+  Date con Oriol ("Empieza: Tú"), la prórroga suma 24 horas y se deshabilita, abre un Date con Laia y `/users` lo devuelve a Dates; como admin,
+  los 5 Dates con las dos personas, "caducado" en el cerrado y el filtro por usuario; y con 390 px de ancho, tarjetas.
+- Prompt de IA usado: «Las pantallas de Dates, igual que las de La Orla: primero el mockup para verlo, y responsive desde el principio para que se
+  vea en el móvil.»
 
-### 2026-10-19 · Ejercicio del seminario 7: access token en memoria y refresh token en cookie HttpOnly
+### 2026-11-03 · README final y contrato al día
 
-- Problema de partida: `AuthService` guardaba `token`, `refreshToken` y `user` en `localStorage`.
-  Cualquier script que se ejecute en la página (XSS) puede leerlo, y con el refresh token conseguir
-  access tokens nuevos durante 7 días.
-- `AuthService`: el access token pasa a una signal privada `accessToken` (solo en memoria), igual que
-  el usuario. `getToken()` la lee, así el interceptor y el chat no cambian. Las tres llamadas a `/auth`
-  (login, refresh y logout) llevan `{ withCredentials: true }`, que es lo que hace que el navegador
-  envíe y acepte la cookie entre `localhost:4200` y `localhost:1337`. Desaparece todo uso de
-  `localStorage` para la sesión.
-- Al recargar la página el access token se ha perdido. Nuevo `restoreSession()`: llama a
-  `/auth/refresh` (la cookie va sola) y después a `GET /users/me` para recuperar el usuario; si algo
-  falla se queda sin sesión y no lanza error. Se ejecuta antes de pintar nada con
-  `provideAppInitializer` en `app.config.ts`, así los guards ya saben si hay sesión cuando se abre la
-  primera ruta y, si la cookie no vale, `authGuard` lleva al login sin código extra.
-- `logout()` llama a `POST /auth/logout` (el backend borra la cookie) y, sin esperar la respuesta,
-  vacía las signals y va al login.
-- `LoginResponse` pierde `refreshToken`; nuevo `MeResponse` para `/users/me`.
-- Eventos de socket que no son chat: `ChatService` escucha `books:changed` y `authors:changed` y los
-  expone como `backofficeChanges$`. El chat los enseña en una franja "Avisos del backoffice" con los 5
-  últimos ("Libro creado: Dune", "Autor borrado: Borges"...). El socket sigue viviendo solo en la
-  página del chat, como hasta ahora.
-- Tests: los specs que preparaban la sesión escribiendo en `localStorage` (`AuthService`, interceptor,
-  guards, `App` y `Chat`) ahora la preparan con un login simulado con `HttpTestingController`. Nuevos
-  tests de `restoreSession()` (con cookie válida y con 401) y de los avisos en el chat.
-- Documentación: README (apartado Autenticación reescrito con la decisión nueva y la tabla
-  localStorage frente a cookie), GUIA (apartado 13 y "Probarlo" con las comprobaciones en DevTools,
-  apartado 14 con los avisos) y el Contrato en los dos LOGS.md.
-- Verificación: `npm run lint` sin errores, `npm test -- --watch=false` con 65 tests en verde (14
-  ficheros) y `npm run build` correcto. En Chromium (Playwright) contra el backend real, 17
-  comprobaciones correctas: el JSON del login solo trae `token` y `user`; `localStorage` y
-  `sessionStorage` vacíos; `document.cookie` vacío; la cookie `refreshToken` existe con `HttpOnly`,
-  `SameSite=Strict`, `Path=/auth`, 7 días y sin `Secure`; al recargar se llama a `/auth/refresh` (200) y
-  `/users/me` (200) y la sesión sigue; un `user` con el chat abierto ve "Libro creado: ..." cuando el
-  admin crea un libro en otra ventana; al cerrar sesión se llama a `/auth/logout` (204), la cookie
-  desaparece y al volver a entrar `/auth/refresh` da 401 y la app va al login.
-- Prompt de IA usado: «Resolver el ejercicio del seminario 7 (PDF): refresh token en cookie HttpOnly y
-  SameSite=Strict solo para /auth, access token solo en memoria, CORS con credenciales, y añadir
-  eventos de socket.io que no sean de chat. Hacerlo sencillo, al estilo del resto del proyecto».
+- Repaso final del README contra el código: la introducción explica las dos zonas de la app (Dates para todos y el backoffice solo para el
+  admin), y los scripts dicen cuántos tests hay. Las pantallas, la estructura del proyecto y la autenticación ya se habían ido poniendo al día
+  al cerrar cada rama; se comprueba que coinciden con `app.routes.ts` y con `src/app/`.
+- Contrato copiado otra vez del backend: el 409 de un voto repetido ahora trae el mensaje "Este usuario ya ha votado ese perfil" (antes
+  "from ya existe"), que es el que enseña el formulario de nuevo voto.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (16 ficheros, 60 tests); con la API, el formulario de
+  nuevo voto con una pareja repetida enseña el mensaje nuevo.
+- Prompt de IA usado: el README va "al final de cada rama, como continuación"; esta es la del cierre del sprint.

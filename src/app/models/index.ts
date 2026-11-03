@@ -1,13 +1,3 @@
-export type { Author, AuthorsPage, CreateAuthor, UpdateAuthor } from './author.model';
-export type {
-  Book,
-  BookInput,
-  BookLanguage,
-  BooksPage,
-  CreateBook,
-  UpdateBook,
-} from './book.model';
-export { BOOK_LANGUAGES, BOOK_TAGS } from './book.model';
 export type {
   LoginRequest,
   LoginResponse,
@@ -15,6 +5,33 @@ export type {
   RefreshResponse,
   RegisterRequest,
   RegisterResponse,
+  CreateUser,
+  UpdateUser,
   User,
+  UserResponse,
+  UserFilters,
   UserRole,
+  UsersPage,
 } from './user.model';
+export { DEGREES } from './user.model';
+export type {
+  CreateGrade,
+  Grade,
+  GradeFilters,
+  GradeResponse,
+  GradesPage,
+  GradeUser,
+  GradeValue,
+} from './grade.model';
+export { GRADE_VALUES } from './grade.model';
+export type {
+  CreateDate,
+  DateFilters,
+  DateResponse,
+  DatesPage,
+  DateStatus,
+  DirectoryResponse,
+  DirectoryUser,
+  StudateDate,
+} from './date.model';
+export { DATE_STATUS_LABELS } from './date.model';

@@ -15,7 +15,7 @@ import { adminGuard, authGuard, guestGuard } from './auth.guard';
 
 describe('auth guards', () => {
   // Un guard funcional usa inject(), así que hay que llamarlo dentro de un contexto de inyección
-  function run(guard: CanActivateFn, url = '/books'): boolean | UrlTree {
+  function run(guard: CanActivateFn, url = '/users'): boolean | UrlTree {
     return TestBed.runInInjectionContext(
       () =>
         guard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot) as boolean | UrlTree,
@@ -24,7 +24,7 @@ describe('auth guards', () => {
 
   // La sesión ya no se lee de localStorage: se prepara con un login simulado
   function loginAs(role: 'user' | 'admin'): void {
-    TestBed.inject(AuthService).login({ email: 'x@y.z', password: 'seminari7' }).subscribe();
+    TestBed.inject(AuthService).login({ email: 'x@y.z', password: 'studate26' }).subscribe();
     TestBed.inject(HttpTestingController)
       .expectOne(`${environment.apiUrl}/auth/login`)
       .flush({ token: 't', user: { _id: 'u1', name: 'X', email: 'x@y.z', role } });
@@ -37,8 +37,8 @@ describe('auth guards', () => {
   });
 
   it('authGuard sends a visitor without a session to the login, remembering the url', () => {
-    const result = run(authGuard, '/books');
-    expect(result.toString()).toBe('/login?returnUrl=%2Fbooks');
+    const result = run(authGuard, '/users');
+    expect(result.toString()).toBe('/login?returnUrl=%2Fusers');
   });
 
   it('authGuard lets a user with a session in', () => {

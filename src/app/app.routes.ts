@@ -1,57 +1,51 @@
 import { Routes } from '@angular/router';
 
-import { AuthorForm } from './components/author-form/author-form';
-import { AuthorsList } from './components/authors-list/authors-list';
-import { BookForm } from './components/book-form/book-form';
-import { BooksList } from './components/books-list/books-list';
-import { Chat } from './components/chat/chat';
-import { Home } from './components/home/home';
+import { DateForm } from './components/date-form/date-form';
+import { DatesList } from './components/dates-list/dates-list';
+import { GradeForm } from './components/grade-form/grade-form';
+import { GradesList } from './components/grades-list/grades-list';
 import { Login } from './components/login/login';
 import { Register } from './components/register/register';
+import { UserForm } from './components/user-form/user-form';
+import { UsersList } from './components/users-list/users-list';
 import { adminGuard, authGuard, guestGuard } from './guards/auth.guard';
 
 // canActivate: los guards que se comprueban, en orden, antes de entrar en la ruta.
 //   guestGuard            solo sin sesión (login y registro)
 //   authGuard             solo con sesión; si no, al login
-//   authGuard, adminGuard con sesión y además rol admin; un user vuelve a la página de inicio
+//   authGuard, adminGuard con sesión y además rol admin; un user vuelve a sus Dates
 export const routes: Routes = [
-  { path: '', component: Home, canActivate: [authGuard], title: 'Inicio' },
+  // La pantalla de entrada, para el admin y para un usuario normal, son los Dates
+  { path: '', redirectTo: 'dates', pathMatch: 'full' },
   { path: 'login', component: Login, canActivate: [guestGuard], title: 'Iniciar sesión' },
   { path: 'register', component: Register, canActivate: [guestGuard], title: 'Crear cuenta' },
 
+  // Dates: cualquier usuario con sesión (cada uno ve los suyos; el admin, todos)
+  { path: 'dates', component: DatesList, canActivate: [authGuard], title: 'Dates' },
+  { path: 'dates/new', component: DateForm, canActivate: [authGuard], title: 'Nuevo Date' },
+
+  // Backoffice: solo admin
+  { path: 'users', component: UsersList, canActivate: [authGuard, adminGuard], title: 'Usuarios' },
   {
-    path: 'authors',
-    component: AuthorsList,
+    path: 'users/new',
+    component: UserForm,
     canActivate: [authGuard, adminGuard],
-    title: 'Autores',
+    title: 'Nuevo usuario',
   },
   {
-    path: 'authors/new',
-    component: AuthorForm,
+    path: 'users/:id/edit',
+    component: UserForm,
     canActivate: [authGuard, adminGuard],
-    title: 'Nuevo autor',
+    title: 'Editar usuario',
   },
+  { path: 'grades', component: GradesList, canActivate: [authGuard, adminGuard], title: 'La Orla' },
   {
-    path: 'authors/:id/edit',
-    component: AuthorForm,
+    path: 'grades/new',
+    component: GradeForm,
     canActivate: [authGuard, adminGuard],
-    title: 'Editar autor',
-  },
-  { path: 'books', component: BooksList, canActivate: [authGuard, adminGuard], title: 'Libros' },
-  {
-    path: 'books/new',
-    component: BookForm,
-    canActivate: [authGuard, adminGuard],
-    title: 'Nuevo libro',
-  },
-  { path: 'chat', component: Chat, canActivate: [authGuard], title: 'Chat' },
-  {
-    path: 'books/:id/edit',
-    component: BookForm,
-    canActivate: [authGuard, adminGuard],
-    title: 'Editar libro',
+    title: 'Nuevo voto',
   },
 
-  // Cualquier otra URL vuelve a la página de inicio (o al login, si no hay sesión)
-  { path: '**', redirectTo: '' },
+  // Cualquier otra URL vuelve a los Dates (o al login, si no hay sesión)
+  { path: '**', redirectTo: 'dates' },
 ];

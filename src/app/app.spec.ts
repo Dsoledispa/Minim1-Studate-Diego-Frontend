@@ -17,7 +17,7 @@ describe('App', () => {
 
   // La sesión ya no se lee de localStorage: se prepara con un login simulado
   function loginAs(role: 'user' | 'admin'): void {
-    TestBed.inject(AuthService).login({ email: 'x@y.z', password: 'seminari7' }).subscribe();
+    TestBed.inject(AuthService).login({ email: 'x@y.z', password: 'studate26' }).subscribe();
     TestBed.inject(HttpTestingController)
       .expectOne(`${environment.apiUrl}/auth/login`)
       .flush({ token: 't', user: { _id: 'u1', name: 'X', email: 'x@y.z', role } });
@@ -40,15 +40,15 @@ describe('App', () => {
     expect(await navLinks()).toEqual(['Iniciar sesión', 'Registrarse']);
   });
 
-  it('an admin sees the backoffice links and chat', async () => {
+  it('an admin sees the backoffice link', async () => {
     await setup();
     loginAs('admin');
-    expect(await navLinks()).toEqual(['Autores', 'Libros', 'Chat']);
+    expect(await navLinks()).toEqual(['Dates', 'Usuarios', 'La Orla']);
   });
 
-  it('a user sees chat but not the backoffice links', async () => {
+  it('a user only sees the Dates link', async () => {
     await setup();
     loginAs('user');
-    expect(await navLinks()).toEqual(['Chat']);
+    expect(await navLinks()).toEqual(['Dates']);
   });
 });

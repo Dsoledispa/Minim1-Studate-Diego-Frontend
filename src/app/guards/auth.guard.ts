@@ -21,7 +21,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 };
 
-// Solo para admin. Va siempre después de authGuard. Un user con sesión vuelve a la página de inicio
+// Solo para admin. Va siempre después de authGuard. Un user con sesión vuelve a la página de entrada (sus Dates)
 export const adminGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);

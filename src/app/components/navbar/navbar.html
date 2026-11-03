@@ -1,19 +1,21 @@
 <header class="navbar">
-  <a class="brand" routerLink="/">Backoffice</a>
+  <a class="brand" routerLink="/">Stu<span>date</span></a>
 
-  <!-- Los enlaces del backoffice solo los ve un admin. Ocultarlos es comodidad, no seguridad:
-       si un user escribe la URL, adminGuard lo devuelve al inicio y la API responde 403 -->
-  @if (auth.isAdmin()) {
-    <!-- routerLinkActive le pone la clase "active" al enlace de la página en la que estoy -->
+  <!-- Los Dates son para cualquier usuario con sesión -->
+  @if (auth.isLoggedIn()) {
     <nav>
-      <a routerLink="/authors" routerLinkActive="active">Autores</a>
-      <a routerLink="/books" routerLinkActive="active">Libros</a>
+      <a routerLink="/dates" routerLinkActive="active">Dates</a>
     </nav>
   }
 
-  @if (auth.isLoggedIn()) {
+  <!-- La zona del backoffice solo la ve un admin. Ocultarla es comodidad, no seguridad:
+       si un user escribe la URL, adminGuard lo devuelve al inicio y la API responde 403 -->
+  @if (auth.isAdmin()) {
+    <span class="zone">Backoffice</span>
+    <!-- routerLinkActive le pone la clase "active" al enlace de la página en la que estoy -->
     <nav>
-      <a routerLink="/chat" routerLinkActive="active">Chat</a>
+      <a routerLink="/users" routerLinkActive="active">Usuarios</a>
+      <a routerLink="/grades" routerLinkActive="active">La Orla</a>
     </nav>
   }
 

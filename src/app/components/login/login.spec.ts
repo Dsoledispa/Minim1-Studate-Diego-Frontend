@@ -44,26 +44,37 @@ describe('Login', () => {
   });
 
   it('goes back to the page it came from after logging in', () => {
-    fixture.componentRef.setInput('returnUrl', '/books');
-    component.form.setValue({ email: 'admin@example.com', password: 'seminari7' });
+    fixture.componentRef.setInput('returnUrl', '/users');
+    component.form.setValue({ email: 'admin@example.com', password: 'studate26' });
     component.login();
     httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
       token: 't',
       user: { _id: 'u1', name: 'Admin', email: 'admin@example.com', role: 'admin' },
     });
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/books', { replaceUrl: true });
+    expect(navigateByUrl).toHaveBeenCalledWith('/users', { replaceUrl: true });
   });
 
-  it('ignores a returnUrl that points outside the app', () => {
+  it('ignores a returnUrl that points outside the app and goes to the Dates', () => {
     fixture.componentRef.setInput('returnUrl', 'https://example.com');
-    component.form.setValue({ email: 'admin@example.com', password: 'seminari7' });
+    component.form.setValue({ email: 'admin@example.com', password: 'studate26' });
     component.login();
     httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
       token: 't',
       user: { _id: 'u1', name: 'Admin', email: 'admin@example.com', role: 'admin' },
     });
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/', { replaceUrl: true });
+    expect(navigateByUrl).toHaveBeenCalledWith('/dates', { replaceUrl: true });
+  });
+
+  it('sends a user to the Dates too', () => {
+    component.form.setValue({ email: 'user@example.com', password: 'studate26' });
+    component.login();
+    httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
+      token: 't',
+      user: { _id: 'u2', name: 'Usuario', email: 'user@example.com', role: 'user' },
+    });
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/dates', { replaceUrl: true });
   });
 });
