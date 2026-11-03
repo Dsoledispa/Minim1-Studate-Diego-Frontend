@@ -17,7 +17,7 @@ export class Login {
   private auth = inject(AuthService);
   private router = inject(Router);
 
-  // Vienen de la URL (?returnUrl=/books o ?registered=true) gracias a withComponentInputBinding.
+  // Vienen de la URL (?returnUrl=/users o ?registered=true) gracias a withComponentInputBinding.
   // returnUrl lo pone authGuard: es la página a la que se quería ir antes de iniciar sesión
   returnUrl = input<string>();
   // registered lo pone la pantalla de registro para enseñar el aviso de cuenta creada

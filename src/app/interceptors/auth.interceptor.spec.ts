@@ -13,7 +13,7 @@ describe('authInterceptor', () => {
   let auth: AuthService;
   let navigate: ReturnType<typeof vi.spyOn>;
 
-  const authorsUrl = `${environment.apiUrl}/authors`;
+  const usersUrl = `${environment.apiUrl}/users`;
   const refreshUrl = `${environment.apiUrl}/auth/refresh`;
   const logoutUrl = `${environment.apiUrl}/auth/logout`;
 
@@ -46,9 +46,9 @@ describe('authInterceptor', () => {
   }
 
   it('adds the Authorization header with the token in memory', () => {
-    http.get(authorsUrl).subscribe();
+    http.get(usersUrl).subscribe();
 
-    const req = httpMock.expectOne(authorsUrl);
+    const req = httpMock.expectOne(usersUrl);
     expect(req.request.headers.get('Authorization')).toBe('Bearer access-1');
     req.flush({});
   });
@@ -63,10 +63,10 @@ describe('authInterceptor', () => {
 
   it('renews an expired token and repeats the request with the new one', () => {
     let response: unknown;
-    http.get(authorsUrl).subscribe((res) => (response = res));
+    http.get(usersUrl).subscribe((res) => (response = res));
 
     httpMock
-      .expectOne(authorsUrl)
+      .expectOne(usersUrl)
       .flush({ message: 'El token ha caducado' }, { status: 401, statusText: 'Unauthorized' });
 
     // El refresh no lleva body: el refresh token va en la cookie
@@ -75,20 +75,20 @@ describe('authInterceptor', () => {
     expect(refresh.request.withCredentials).toBe(true);
     refresh.flush({ token: 'access-2' });
 
-    const retry = httpMock.expectOne(authorsUrl);
+    const retry = httpMock.expectOne(usersUrl);
     expect(retry.request.headers.get('Authorization')).toBe('Bearer access-2');
-    retry.flush({ authors: [] });
+    retry.flush({ users: [] });
 
-    expect(response).toEqual({ authors: [] });
+    expect(response).toEqual({ users: [] });
     expect(navigate).not.toHaveBeenCalled();
   });
 
   it('logs out when the token cannot be renewed', () => {
     let failed = false;
-    http.get(authorsUrl).subscribe({ error: () => (failed = true) });
+    http.get(usersUrl).subscribe({ error: () => (failed = true) });
 
     httpMock
-      .expectOne(authorsUrl)
+      .expectOne(usersUrl)
       .flush({ message: 'El token ha caducado' }, { status: 401, statusText: 'Unauthorized' });
     httpMock
       .expectOne(refreshUrl)
@@ -101,10 +101,10 @@ describe('authInterceptor', () => {
   });
 
   it('logs out on any other 401 without trying to renew', () => {
-    http.get(authorsUrl).subscribe({ error: () => undefined });
+    http.get(usersUrl).subscribe({ error: () => undefined });
 
     httpMock
-      .expectOne(authorsUrl)
+      .expectOne(usersUrl)
       .flush({ message: 'Token no válido' }, { status: 401, statusText: 'Unauthorized' });
     expectLogout();
 
@@ -114,10 +114,10 @@ describe('authInterceptor', () => {
 
   it('lets other errors through without touching the session', () => {
     let status = 0;
-    http.get(authorsUrl).subscribe({ error: (err) => (status = err.status) });
+    http.get(usersUrl).subscribe({ error: (err) => (status = err.status) });
 
     httpMock
-      .expectOne(authorsUrl)
+      .expectOne(usersUrl)
       .flush({ message: 'Necesitas el rol admin' }, { status: 403, statusText: 'Forbidden' });
 
     expect(status).toBe(403);
