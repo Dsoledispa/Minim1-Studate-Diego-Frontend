@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 
+import { GradeForm } from './components/grade-form/grade-form';
+import { GradesList } from './components/grades-list/grades-list';
 import { Home } from './components/home/home';
 import { Login } from './components/login/login';
 import { Register } from './components/register/register';
@@ -29,6 +31,13 @@ export const routes: Routes = [
     component: UserForm,
     canActivate: [authGuard, adminGuard],
     title: 'Editar usuario',
+  },
+  { path: 'grades', component: GradesList, canActivate: [authGuard, adminGuard], title: 'La Orla' },
+  {
+    path: 'grades/new',
+    component: GradeForm,
+    canActivate: [authGuard, adminGuard],
+    title: 'Nuevo voto',
   },
 
   // Cualquier otra URL vuelve a la página de inicio (o al login, si no hay sesión)

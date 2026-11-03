@@ -43,7 +43,7 @@ describe('App', () => {
   it('an admin sees the backoffice link', async () => {
     await setup();
     loginAs('admin');
-    expect(await navLinks()).toEqual(['Usuarios']);
+    expect(await navLinks()).toEqual(['Usuarios', 'La Orla']);
   });
 
   it('a user does not see the backoffice link', async () => {
