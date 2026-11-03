@@ -31,7 +31,6 @@ Lo que ya está instalado y funcionando:
 | [jsdom](https://github.com/jsdom/jsdom) | 28.1 | Simula el navegador dentro de Node para que los tests puedan pintar componentes |
 | [ESLint](https://eslint.org/) + [angular-eslint](https://github.com/angular-eslint/angular-eslint) | 10.12 / 21.4 | Linter: analiza el TypeScript y también las plantillas HTML, con reglas propias de Angular y de accesibilidad |
 | [Prettier](https://prettier.io/) | 3.9 | Da formato al código (reglas en `.prettierrc`, con el parser de Angular para los `.html`) |
-| [socket.io-client](https://socket.io/docs/v4/client-api/) | 4.8 | Cliente de WebSockets del chat, encapsulado en `ChatService` |
 
 El token JWT no necesita librería: el interceptor y el guard se hacen con lo que ya trae Angular.
 
@@ -63,9 +62,8 @@ npm run dev
 ```
 
 La API queda en http://localhost:1337 y su documentación (Swagger) en http://localhost:1337/api-docs.
-`npm run seed` mete 2 usuarios, 12 autores y 12 libros de ejemplo; con `npm run seed -- --reset` se
-vuelven a poner desde cero. Si tu base de datos es de antes del Seminario 7, ejecuta una de las dos
-cosas: `npm run migrate-authors` o `npm run seed -- --reset` (lo explica el README del backend).
+`npm run seed` mete los usuarios de ejemplo; con `npm run seed -- --reset` se vuelven a poner desde
+cero.
 Si ya tenías un `.env`, copia en él las variables `JWT_...` de `.env.example`.
 
 **2. Frontend (este repo)**
@@ -83,7 +81,7 @@ Y se abre http://localhost:4200. La página se recarga sola cada vez que guardas
 
 | Email | Contraseña | Qué ve |
 |---|---|---|
-| `admin@example.com` | `seminari7` | El backoffice entero: autores y libros |
+| `admin@example.com` | `seminari7` | La página de inicio (las pantallas de Studate llegan en sus ramas) |
 | `user@example.com` | `seminari7` | Solo la página de inicio: el backoffice es para administradores |
 
 También se puede crear una cuenta en "Registrarse". Las cuentas nuevas son siempre de rol `user`.
@@ -91,7 +89,7 @@ También se puede crear una cuenta en "Registrarse". Las cuentas nuevas son siem
 ## Configuración: un solo fichero
 
 El frontend no usa `.env`: lo que llega al navegador lo puede leer cualquiera, así que aquí no hay
-secretos. Toda la configuración está en **un** fichero, y para cambiar la dirección de la API o del chat se toca
+secretos. Toda la configuración está en **un** fichero, y para cambiar la dirección de la API se toca
 aquí y en ningún sitio más:
 
 ```typescript
@@ -99,13 +97,8 @@ aquí y en ningún sitio más:
 export const environment = {
   // URL usada por las llamadas HTTP.
   apiUrl: 'http://localhost:1337',
-
-  // URL base usada para conectar con Socket.IO.
-  socketUrl: 'http://localhost:1337',
 };
 ```
-
-Las dos son iguales porque el backend sirve la API y el chat en el mismo puerto.
 
 ## Scripts
 
@@ -123,14 +116,7 @@ Las dos son iguales porque el backend sirve la API y el chat en el mismo puerto.
 |---|---|---|
 | `/login` | Iniciar sesión | Solo sin sesión |
 | `/register` | Crear una cuenta | Solo sin sesión |
-| `/` | Inicio: saludo, rol, acceso al chat y al backoffice si es admin | Con sesión |
-| `/chat` | Chat en tiempo real: general, de grupo y directo | Con sesión |
-| `/authors` | Lista de autores (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
-| `/authors/new` | Nuevo autor | Admin |
-| `/authors/:id/edit` | Editar autor | Admin |
-| `/books` | Lista de libros (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
-| `/books/new` | Nuevo libro | Admin |
-| `/books/:id/edit` | Editar libro | Admin |
+| `/` | Inicio: saludo y rol | Con sesión |
 
 Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o al inicio (un `user` que
 intenta entrar en el backoffice).
@@ -151,26 +137,14 @@ src/
       login/               Iniciar sesión
       register/            Crear una cuenta
       home/                Página de inicio para cualquier usuario con sesión
-      chat/                Chat: pestañas general, grupo y directo, mensajes y estado de la conexión
-      authors-list/        Lista de autores
-      author-card/         Tarjeta de un autor (componente hijo de la lista)
-      author-form/         Crear y editar autores
-      books-list/          Lista de libros
-      book-form/           Crear y editar libros
-      pagination/          Paginación, componente hijo de las dos listas
+      pagination/          Paginación, componente hijo de las listas
       confirm-modal/       Ventana para confirmar antes de borrar
       view-toggle/         Botones para ver las listas en tabla o en tarjetas
     models/                Interfaces TypeScript con la forma de los datos de la API
-      author.model.ts        Author, CreateAuthor, UpdateAuthor
-      book.model.ts          Book, BookInput, CreateBook, UpdateBook, BOOK_LANGUAGES, BOOK_TAGS
       user.model.ts          User, UserRole y las peticiones y respuestas de /auth
     services/              Las únicas piezas que hablan con la API (HttpClient)
       auth.service.ts        register, login, refresh, restoreSession, logout; token y usuario en signals
-      author.service.ts      getAuthors, getAuthor, createAuthor, updateAuthor, deleteAuthor
-      book.service.ts        getBooks, getBook, createBook, updateBook, deleteBook
-      chat.service.ts        El socket: connect, joinRoom, sendMessage, los eventos del chat y los avisos del backoffice como Observables
     pipes/                 Formatean datos en la plantilla
-      language-name-pipe.ts  'es' -> 'Castellano'
       truncate-pipe.ts       Corta textos largos con "..."
     interceptors/
       auth.interceptor.ts  Añade el token a cada petición y lo renueva si ha caducado
@@ -242,38 +216,11 @@ Los guards y el ocultar botones son solo comodidad: quien protege los datos es e
 comprueba el token y el rol en cada petición. Desde las herramientas del navegador se puede saltar un
 guard, pero la API seguiría respondiendo 401 o 403.
 
-## Chat
-
-El chat no usa HTTP sino un WebSocket con [socket.io](https://socket.io/): una conexión que se queda
-abierta para que el servidor pueda avisar en cuanto alguien escribe. Cómo está hecho por dentro
-(servicio, Observables, recorrido de un mensaje) está en el
-[apartado 14 de la GUIA](GUIA.md#14-chat-con-websockets); los eventos y los nombres de las salas, en
-el Contrato de [LOGS.md](LOGS.md).
-
-- **General**: la sala de todos.
-- **Grupo**: se escribe un nombre (por ejemplo `seminario-7`) y entra quien escriba el mismo.
-- **Directo**: se elige otro usuario de la lista. Solo pueden leerlo y escribir en él esos dos usuarios.
-
-Arriba, la franja **Usuarios** dice quién tiene el chat abierto ahora mismo (punto verde) y quién no
-(gris). Pulsar un usuario abre el chat directo con él.
-
-Por el mismo socket llegan eventos que **no son chat**: cuando un admin crea, edita o borra un libro o
-un autor, el servidor emite `books:changed` o `authors:changed` a todos los conectados y el chat lo
-enseña en la franja **Avisos del backoffice** ("Libro creado: Dune"). Para verlo, un usuario con el
-chat abierto y un admin guardando un libro en otra ventana.
-
-Al entrar en una sala llegan los últimos 50 mensajes. Para probarlo hacen falta dos sesiones a la vez,
-por ejemplo una ventana normal con `admin@example.com` y una de incógnito con `user@example.com`.
-
 ## Cosas de la API que hay que saber
 
-- Editar es un PUT y la API pide siempre los campos obligatorios (en los autores, el nombre y el
-  email). Un autor no tiene contraseña ni rol: quien inicia sesión es un usuario.
+- Editar es un PUT y la API pide siempre los campos obligatorios.
 - Un campo opcional que se deja vacío al editar no se borra. La API rechaza los valores vacíos, así
-  que el formulario no los envía y la API deja el valor que tenía. Los tags sí se pueden vaciar: si se
-  desmarcan todos se envía una lista vacía.
-- Borrar es un borrado lógico: la API marca el autor o el libro como borrado y deja de devolverlo, pero
-  sigue en la base de datos. Por eso un autor borrado **sigue apareciendo dentro de sus libros**.
+  que el formulario no los envía (`utils/remove-empty.ts`) y la API deja el valor que tenía.
 - Los mensajes de error de validación que devuelve la API (422) vienen en inglés, de Joi.
 
 ## Cómo contribuir

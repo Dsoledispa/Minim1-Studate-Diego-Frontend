@@ -40,15 +40,9 @@ describe('App', () => {
     expect(await navLinks()).toEqual(['Iniciar sesión', 'Registrarse']);
   });
 
-  it('an admin sees the backoffice links and chat', async () => {
+  it('with a session the navigation bar no longer offers login and register', async () => {
     await setup();
     loginAs('admin');
-    expect(await navLinks()).toEqual(['Autores', 'Libros', 'Chat']);
-  });
-
-  it('a user sees chat but not the backoffice links', async () => {
-    await setup();
-    loginAs('user');
-    expect(await navLinks()).toEqual(['Chat']);
+    expect(await navLinks()).toEqual([]);
   });
 });

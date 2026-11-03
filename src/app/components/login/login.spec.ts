@@ -44,7 +44,7 @@ describe('Login', () => {
   });
 
   it('goes back to the page it came from after logging in', () => {
-    fixture.componentRef.setInput('returnUrl', '/books');
+    fixture.componentRef.setInput('returnUrl', '/users');
     component.form.setValue({ email: 'admin@example.com', password: 'seminari7' });
     component.login();
     httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
@@ -52,7 +52,7 @@ describe('Login', () => {
       user: { _id: 'u1', name: 'Admin', email: 'admin@example.com', role: 'admin' },
     });
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/books', { replaceUrl: true });
+    expect(navigateByUrl).toHaveBeenCalledWith('/users', { replaceUrl: true });
   });
 
   it('ignores a returnUrl that points outside the app', () => {

@@ -47,7 +47,7 @@ LOGS.md.
 #### Estructura (`structure`)
 
 - [x] Crear los dos repositorios a partir del Seminari 7 (README y ramas) · Diego
-- [ ] Quitar autores, libros y chat del frontend · Miguel Ángel
+- [x] Quitar autores, libros y chat del frontend · Miguel Ángel
 
 #### Backoffice (`backoffice`)
 
@@ -83,3 +83,22 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
 - Prompt de IA usado: «Lo mismo que en el backend: esto es el frontend del seminario 7 copiado tal cual. Hay
   que limpiarlo para Studate [...] Dime el plan de acción de cómo lo harías.» (conversación completa en
   `prompts/sprint-1.md`, fuera del repositorio).
+
+### 2026-11-03 · Limpieza: fuera autores, libros y chat
+
+- Se borran los componentes `authors-list`, `author-card`, `author-form`, `books-list`, `book-form` y `chat`,
+  los services de autores, libros y chat (con sus tests), los modelos `author.model.ts` y `book.model.ts` y el
+  pipe `languageName`. Se desinstala `socket.io-client` y desaparece `socketUrl` de `environment.ts`.
+- Se quedan, porque los vamos a usar en las pantallas de usuarios: `pagination`, `confirm-modal`,
+  `view-toggle`, el pipe `truncate` y las utilidades de `utils/`. Login, registro, interceptor y guards no cambian.
+- Rutas: solo inicio, login y registro (las de Studate llegan en sus ramas). El navbar ya no tiene enlaces de
+  backoffice ni de chat y la marca dice "Studate". La página de inicio saluda y explica lo que vendrá.
+- Los tests que usaban `/books` o `/authors` como URL de ejemplo (login, guard e interceptor) pasan a usar
+  `/users`; el test de `app` que comprobaba los enlaces del backoffice y del chat se cambia por uno que
+  comprueba que con sesión ya no salen login y registro.
+- README: fuera la sección del chat, las pantallas, ficheros y dependencias que ya no existen.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde: 7 ficheros y 28
+  tests (en el seminario eran 65; los que faltan eran de autores, libros y chat). Con la API y `ng serve`
+  arrancados, en el navegador: el login de `admin@example.com` lleva a la página de inicio con el saludo; el único
+  error de consola es el 401 de `/auth/refresh` al abrir la app sin sesión, que es lo esperado.
+- Prompt de IA usado: el mismo de la limpieza del repositorio (ver la entrada anterior).

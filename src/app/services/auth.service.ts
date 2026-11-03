@@ -101,7 +101,7 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  /** El access token en memoria, o null si no hay sesión. Lo usan el interceptor y el chat */
+  /** El access token en memoria, o null si no hay sesión. Lo usa el interceptor */
   getToken(): string | null {
     return this.accessToken();
   }

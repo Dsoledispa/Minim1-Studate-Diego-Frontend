@@ -3,18 +3,5 @@
   <h1>Hola, {{ user.name }}</h1>
   <p class="muted">Has iniciado sesión como {{ user.email }} con el rol {{ user.role }}.</p>
 
-  <p>Puedes hablar con el resto de usuarios en el chat: general, de grupo o directo.</p>
-  <div class="form-actions">
-    <a class="button" routerLink="/chat">Ir al chat</a>
-  </div>
-
-  @if (auth.isAdmin()) {
-    <p>Desde el backoffice puedes gestionar:</p>
-    <div class="form-actions">
-      <a class="button" routerLink="/authors">Autores</a>
-      <a class="button" routerLink="/books">Libros</a>
-    </div>
-  } @else {
-    <p>El backoffice de autores y libros es solo para administradores.</p>
-  }
+  <p>Bienvenido a Studate. Desde aquí se gestionarán los usuarios, los votos de La Orla y los Dates.</p>
 }
