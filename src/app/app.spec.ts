@@ -43,12 +43,12 @@ describe('App', () => {
   it('an admin sees the backoffice link', async () => {
     await setup();
     loginAs('admin');
-    expect(await navLinks()).toEqual(['Usuarios', 'La Orla']);
+    expect(await navLinks()).toEqual(['Dates', 'Usuarios', 'La Orla']);
   });
 
-  it('a user does not see the backoffice link', async () => {
+  it('a user only sees the Dates link', async () => {
     await setup();
     loginAs('user');
-    expect(await navLinks()).toEqual([]);
+    expect(await navLinks()).toEqual(['Dates']);
   });
 });

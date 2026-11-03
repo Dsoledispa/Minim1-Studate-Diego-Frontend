@@ -81,8 +81,8 @@ Y se abre http://localhost:4200. La página se recarga sola cada vez que guardas
 
 | Email | Contraseña | Qué ve |
 |---|---|---|
-| `admin@example.com` | `studate26` | El backoffice: entra directamente en Usuarios |
-| `user@example.com` | `studate26` | La página de inicio: el backoffice es solo para administradores |
+| `admin@example.com` | `studate26` | Todos los Dates y el backoffice (Usuarios y La Orla) |
+| `user@example.com` | `studate26` | Solo sus Dates: el backoffice es solo para administradores |
 | `aina@example.com` | `studate26` | Nada: está inactiva y la API no la deja entrar |
 
 También se puede crear una cuenta en "Registrarse". Las cuentas nuevas son siempre de rol `user`.
@@ -117,14 +117,15 @@ export const environment = {
 |---|---|---|
 | `/login` | Iniciar sesión | Solo sin sesión |
 | `/register` | Crear una cuenta | Solo sin sesión |
-| `/` | Inicio: saludo y rol | Con sesión |
+| `/dates` | La pantalla de entrada. Los Dates por bandejas (Pendientes, En curso, Cerrados, Todos): con quién, quién empieza, caducidad, cambiar de bandeja y prórroga. El admin ve todos (con filtro por usuario) y puede eliminar | Con sesión |
+| `/dates/new` | Abrir un Date: el usuario elige con quién; el admin, a los dos | Con sesión |
 | `/users` | Backoffice: lista de usuarios, 10 por página, con buscador y filtros (rol, estado, titulación y archivados). Archivar, restaurar y eliminar para siempre | Admin |
 | `/users/new` | Backoffice: nuevo usuario, con rol, activo, perfil y foto | Admin |
 | `/users/:id/edit` | Backoffice: editar usuario (sin contraseña) | Admin |
 | `/grades` | Backoffice: La Orla, los votos (quién vota a quién, A+ o F), con filtros por nota y por usuario. Cambiar la nota y eliminar | Admin |
 | `/grades/new` | Backoffice: nuevo voto | Admin |
 
-Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o al inicio (un `user` que
+Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o a los Dates (un `user` que
 intenta entrar en el backoffice).
 
 ## Estructura del proyecto
@@ -142,7 +143,8 @@ src/
       navbar/              Menú de arriba: enlaces según el rol, usuario con sesión y cerrar sesión
       login/               Iniciar sesión
       register/            Crear una cuenta
-      home/                Página de inicio para cualquier usuario con sesión
+      dates-list/          Los Dates por bandejas (lo que ve cada uno depende del rol)
+      date-form/           Abrir un Date
       users-list/          Backoffice: lista de usuarios con filtros, archivar, restaurar y eliminar
       user-form/           Backoffice: crear y editar usuarios (rol, activo, perfil y foto)
       grades-list/         Backoffice: La Orla, la lista de votos con filtros, cambiar la nota y eliminar
@@ -154,10 +156,12 @@ src/
     models/                Interfaces TypeScript con la forma de los datos de la API
       user.model.ts          User, UserRole, DEGREES, los filtros y las peticiones y respuestas de /auth y /users
       grade.model.ts         Grade, GradeValue y las peticiones y respuestas de /grades
+      date.model.ts          StudateDate (no Date: taparía la clase Date de JavaScript), DateStatus y lo de /dates
     services/              Las únicas piezas que hablan con la API (HttpClient)
       auth.service.ts        register, login, refresh, restoreSession, logout; token y usuario en signals
-      user.service.ts        getUsers, getUser, createUser, updateUser, archiveUser, restoreUser, deleteUser
+      user.service.ts        getDirectory, getUsers, getUser, createUser, updateUser, archiveUser, restoreUser, deleteUser
       grade.service.ts       getGrades, createGrade, updateGrade, deleteGrade
+      date.service.ts        getDates, createDate, updateStatus, extendDate, deleteDate
     pipes/                 Formatean datos en la plantilla
       truncate-pipe.ts       Corta textos largos con "..."
     interceptors/
@@ -199,7 +203,8 @@ Cómo funciona por dentro (interceptor, guards, renovación del token) está en 
 5. "Cerrar sesión" llama a `POST /auth/logout`, que borra la cookie, y olvida el token de memoria.
 6. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol. El backoffice
    (todo lo que cuelga de `/users` y de `/grades`) lleva `authGuard` y `adminGuard`: solo entra un admin. En la barra
-   de arriba, sus enlaces van detrás de la etiqueta "Backoffice" y un `user` no los ve.
+   de arriba, sus enlaces van detrás de la etiqueta "Backoffice" y un `user` no los ve. Los Dates
+   (`/dates`) son para cualquier usuario con sesión y son la pantalla de entrada después del login.
 7. Si un admin desactiva o archiva a alguien que tiene la sesión abierta, su siguiente petición recibe
    un 401 "Tu cuenta no está activa" y el interceptor le cierra la sesión.
 
@@ -244,6 +249,9 @@ guard, pero la API seguiría respondiendo 401 o 403.
 - Los usuarios no se borran de golpe: primero se archivan (borrado lógico, se pueden restaurar) y solo
   un usuario archivado se puede eliminar para siempre (borrado físico). Un admin no puede cambiarse el
   rol, desactivarse, archivarse ni eliminarse a sí mismo (403).
+- Un Date se abre solo cuando dos usuarios se ponen A+ en La Orla, y también se puede abrir a mano. Un
+  usuario normal solo ve y cambia sus Dates; la API filtra según el token. Para elegir "con quién" usa
+  `GET /users/directory`, porque `GET /users` es del backoffice.
 - La foto de perfil se guarda en el propio usuario como texto en base64. El formulario la reduce antes
   de enviarla para que no pase del límite de la API.
 

@@ -1,6 +1,13 @@
 <header class="navbar">
   <a class="brand" routerLink="/">Stu<span>date</span></a>
 
+  <!-- Los Dates son para cualquier usuario con sesión -->
+  @if (auth.isLoggedIn()) {
+    <nav>
+      <a routerLink="/dates" routerLinkActive="active">Dates</a>
+    </nav>
+  }
+
   <!-- La zona del backoffice solo la ve un admin. Ocultarla es comodidad, no seguridad:
        si un user escribe la URL, adminGuard lo devuelve al inicio y la API responde 403 -->
   @if (auth.isAdmin()) {

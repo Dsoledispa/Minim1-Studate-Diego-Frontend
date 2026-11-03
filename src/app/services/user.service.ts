@@ -3,10 +3,17 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { CreateUser, UpdateUser, UserFilters, UserResponse, UsersPage } from '../models';
+import {
+  CreateUser,
+  DirectoryResponse,
+  UpdateUser,
+  UserFilters,
+  UserResponse,
+  UsersPage,
+} from '../models';
 
-// Las llamadas a la gestión de usuarios del backoffice (/users). Todas son solo para admin:
-// el interceptor añade el token y la API responde 403 si quien llama no es admin
+// Las llamadas a /users. Casi todas son de la gestión de usuarios del backoffice, solo para admin
+// (la API responde 403 a los demás); getDirectory la puede usar cualquier usuario con sesión
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private http = inject(HttpClient);
@@ -33,6 +40,11 @@ export class UserService {
     }
 
     return this.http.get<UsersPage>(this.baseUrl, { params });
+  }
+
+  /** GET /users/directory: con quién puede abrir un Date el usuario con sesión (cualquier rol) */
+  getDirectory(): Observable<DirectoryResponse> {
+    return this.http.get<DirectoryResponse>(`${this.baseUrl}/directory`);
   }
 
   /** GET /users/:id (también si está inactivo o archivado) */

@@ -55,7 +55,7 @@ describe('Login', () => {
     expect(navigateByUrl).toHaveBeenCalledWith('/users', { replaceUrl: true });
   });
 
-  it('ignores a returnUrl that points outside the app and sends an admin to the backoffice', () => {
+  it('ignores a returnUrl that points outside the app and goes to the Dates', () => {
     fixture.componentRef.setInput('returnUrl', 'https://example.com');
     component.form.setValue({ email: 'admin@example.com', password: 'studate26' });
     component.login();
@@ -64,10 +64,10 @@ describe('Login', () => {
       user: { _id: 'u1', name: 'Admin', email: 'admin@example.com', role: 'admin' },
     });
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/users', { replaceUrl: true });
+    expect(navigateByUrl).toHaveBeenCalledWith('/dates', { replaceUrl: true });
   });
 
-  it('sends a user to the home page', () => {
+  it('sends a user to the Dates too', () => {
     component.form.setValue({ email: 'user@example.com', password: 'studate26' });
     component.login();
     httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
@@ -75,6 +75,6 @@ describe('Login', () => {
       user: { _id: 'u2', name: 'Usuario', email: 'user@example.com', role: 'user' },
     });
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/', { replaceUrl: true });
+    expect(navigateByUrl).toHaveBeenCalledWith('/dates', { replaceUrl: true });
   });
 });
