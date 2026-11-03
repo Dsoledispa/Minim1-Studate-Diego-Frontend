@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
 import { User } from '../../models';
+import { AuthService } from '../../services/auth.service';
 import { UsersList } from './users-list';
 
 const laia: User = {
@@ -18,6 +19,8 @@ const laia: User = {
 };
 
 const aina: User = { ...laia, _id: 'u7', name: 'Aina Roca', email: 'aina@example.com', active: false };
+const admin: User = { ...laia, _id: 'u1', name: 'Admin Studate', email: 'admin@example.com', role: 'admin' };
+const sara: User = { ...laia, _id: 'u13', name: 'Sara Molina', email: 'sara@example.com', deleted: true };
 
 describe('UsersList', () => {
   let component: UsersList;
@@ -32,6 +35,11 @@ describe('UsersList', () => {
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
+
+    // Hay sesión del admin u1
+    TestBed.inject(AuthService).login({ email: 'admin@example.com', password: 'studate26' }).subscribe();
+    httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({ token: 't', user: admin });
+
     fixture = TestBed.createComponent(UsersList);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -78,5 +86,44 @@ describe('UsersList', () => {
     expect(component.page()).toBe(1);
     expect(component.total()).toBe(0);
     expect(component.totalPages()).toBe(1);
+  });
+
+  // Botones de la fila de un usuario, por su texto
+  function buttonsOf(rowIndex: number): string[] {
+    fixture.detectChanges();
+    const row = (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr')[rowIndex];
+    return Array.from(row.querySelectorAll('button')).map((button) => button.textContent?.trim() ?? '');
+  }
+
+  it('archives after confirming in the modal and reloads the page', () => {
+    component.askArchive(laia);
+    expect(component.modalConfirmText()).toBe('Archivar');
+
+    component.confirmAction();
+    httpMock.expectOne(`${baseUrl}/u3/archive`).flush({ user: { ...laia, deleted: true } });
+
+    httpMock.expectOne(`${baseUrl}?page=1&limit=10`).flush({ users: [aina], total: 11, page: 1, pages: 2 });
+    expect(component.pending()).toBeNull();
+    expect(component.users().length).toBe(1);
+  });
+
+  it('shows restore and delete for archived users, and the delete modal warns', () => {
+    component.archived.set(true);
+    component.loadPage(1);
+    httpMock.expectOne(`${baseUrl}?page=1&limit=10&archived=true`).flush({ users: [sara], total: 1, page: 1, pages: 1 });
+
+    expect(buttonsOf(0)).toEqual(['Restaurar', 'Eliminar para siempre']);
+
+    component.askDelete(sara);
+    expect(component.modalTitle()).toBe('¿Estás seguro de que quieres eliminar este usuario?');
+    expect(component.modalMessage()).toContain('no se puede deshacer');
+  });
+
+  it('does not offer to archive my own user', () => {
+    component.loadPage(1);
+    httpMock.expectOne(`${baseUrl}?page=1&limit=10`).flush({ users: [admin, laia], total: 2, page: 1, pages: 1 });
+
+    expect(buttonsOf(0)).toEqual(['Editar']);
+    expect(buttonsOf(1)).toEqual(['Editar', 'Archivar']);
   });
 });

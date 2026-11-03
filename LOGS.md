@@ -58,7 +58,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 
 - [x] Lista de usuarios paginada con búsqueda y filtros · Miguel Ángel
 - [x] Formulario de usuario: crear, editar, rol y activo · Miguel Ángel
-- [ ] Archivar, restaurar y eliminar desde el backoffice · Miguel Ángel
+- [x] Archivar, restaurar y eliminar desde el backoffice · Miguel Ángel
 - [ ] Acceso solo para admin (login y guards) · Miguel Ángel
 - [ ] Tests del frontend (dentro de cada rama) · Miguel Ángel
 - [ ] README del frontend (al cerrar cada rama) · Miguel Ángel
@@ -154,3 +154,25 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   la foto está guardada como JPG en base64.
 - Prompt de IA usado: «Ahora el formulario de usuario: crear, editar, rol y activo. Es básicamente el register que ya tenemos, pero hecho
   bien y adaptado a los roles. Lo de activo es importante [...] Dame el plan de acción.»
+
+### 2026-11-03 · Archivar, restaurar y eliminar desde el backoffice
+
+- Soft delete primero: en la lista normal cada usuario tiene "Archivar", que abre el `confirm-modal` del seminario ("no podrá
+  iniciar sesión; podrás restaurarlo desde Ver archivados"). En "Ver archivados" salen "Restaurar" (sin modal: no se pierde nada) y
+  "Eliminar para siempre" (hard delete), con el modal "¿Estás seguro de que quieres eliminar este usuario?" que avisa de que no se puede
+  deshacer.
+- Un solo modal para las dos acciones: la signal `pending` guarda el usuario y la acción, y los textos del modal son `computed` que
+  cambian según la acción.
+- En la fila del admin con sesión no sale "Archivar" (la API respondería 403). Si la API responde 409 o 403, se enseña su mensaje.
+- Después de cada acción se recarga la página actual; si el usuario era el último de su página, se pasa a la anterior, como hacía la
+  lista de libros del seminario.
+- `UserService`: `archiveUser` y `restoreUser` (POST) y `deleteUser` (DELETE).
+- Arreglo: el test del formulario navegaba a `/users` sin que el router de prueba tuviera esa ruta y Vitest avisaba de 3 errores no
+  controlados (aunque los tests pasaban). Se le da una ruta vacía `users` y desaparecen.
+- Tests nuevos: los tres métodos del service; en la lista, archivar después de confirmar recarga la página, en archivados salen
+  "Restaurar" y "Eliminar para siempre" y el modal de eliminar avisa, y en la fila propia solo sale "Editar".
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde y sin avisos (10 ficheros, 43 tests). En el
+  navegador con el seed recién hecho: archivar a Clara con el modal, verla en archivados, eliminarla para siempre con el modal de "¿Estás
+  seguro?" (en MongoDB ya no está) y restaurar a Sara (en MongoDB vuelve a `deleted: false`).
+- Prompt de IA usado: «Ahora archivar, restaurar y eliminar desde el backoffice [...] Cuando quiera eliminar para siempre, que me salga un
+  modal de "¿Estás seguro de que quieres eliminar esto?" y, si le doy, se elimina. ¿Cómo lo harías? Plan de acción.»

@@ -49,4 +49,19 @@ export class UserService {
   updateUser(id: string, payload: UpdateUser): Observable<UserResponse> {
     return this.http.put<UserResponse>(`${this.baseUrl}/${id}`, payload);
   }
+
+  /** POST /users/:id/archive: borrado lógico, se puede restaurar */
+  archiveUser(id: string): Observable<UserResponse> {
+    return this.http.post<UserResponse>(`${this.baseUrl}/${id}/archive`, {});
+  }
+
+  /** POST /users/:id/restore */
+  restoreUser(id: string): Observable<UserResponse> {
+    return this.http.post<UserResponse>(`${this.baseUrl}/${id}/restore`, {});
+  }
+
+  /** DELETE /users/:id: borrado físico, solo de usuarios archivados (si no, la API responde 409) */
+  deleteUser(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
 }

@@ -92,11 +92,17 @@
               }
             </td>
             <td class="actions">
-              <!-- Un usuario archivado no se edita: primero hay que restaurarlo -->
               @if (!user.deleted) {
                 <button type="button" class="secondary" [routerLink]="['/users', user._id, 'edit']">
                   Editar
                 </button>
+                @if (!isMe(user)) {
+                  <button type="button" class="danger" (click)="askArchive(user)">Archivar</button>
+                }
+              } @else {
+                <!-- Un usuario archivado no se edita: primero se restaura (o se elimina para siempre) -->
+                <button type="button" class="secondary" (click)="restore(user)">Restaurar</button>
+                <button type="button" class="danger" (click)="askDelete(user)">Eliminar para siempre</button>
               }
             </td>
           </tr>
@@ -117,3 +123,12 @@
 
   <app-pagination [page]="page()" [totalPages]="totalPages()" (pageChange)="loadPage($event)" />
 }
+
+<app-confirm-modal
+  [open]="pending() !== null"
+  [title]="modalTitle()"
+  [message]="modalMessage()"
+  [confirmText]="modalConfirmText()"
+  (confirmed)="confirmAction()"
+  (cancelled)="cancelAction()"
+/>

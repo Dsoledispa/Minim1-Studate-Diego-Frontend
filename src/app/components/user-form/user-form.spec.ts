@@ -20,7 +20,12 @@ describe('UserForm', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [UserForm],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      // Al guardar el formulario navega a /users: le doy esa ruta (vacía) para que el router la encuentre
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'users', children: [] }]),
+      ],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
