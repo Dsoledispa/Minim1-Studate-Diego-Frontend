@@ -6,5 +6,8 @@ export type {
   RegisterRequest,
   RegisterResponse,
   User,
+  UserFilters,
   UserRole,
+  UsersPage,
 } from './user.model';
+export { DEGREES } from './user.model';

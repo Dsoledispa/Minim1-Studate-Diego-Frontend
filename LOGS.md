@@ -11,34 +11,38 @@ Las tareas del backend, las de estructura y las de Scrum están en el LOGS.md de
 
 ## Contrato
 
-Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se cambia en los dos
-LOGS.md.
+Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se cambia en los dos LOGS.md.
 
-- **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` y
-  `POST /auth/logout` se autentican con la cookie del refresh token. `GET /ping` y la documentación
+- **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` y `POST /auth/logout` se autentican con la cookie del refresh token. `GET /ping` y la documentación
   (`/api-docs`) también son públicas. Todo lo demás exige token.
-- **Registro**: el cuerpo es `{ name, email, password }` (contraseña de 8 caracteres como mínimo;
-  `role` no se acepta, todo usuario nuevo es `user`). Responde 201 con `{ user }` y **sin token**, 409
-  si el email ya existe o 422 si el cuerpo no es válido. El frontend redirige entonces a la página de
-  login.
-- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, user }` o 401. `user` es
-  `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña. El refresh token **no va en el
-  JSON**: se deja en la cookie `refreshToken` (HttpOnly, SameSite=Strict, Path=/auth, Max-Age de 7
-  días; Secure en producción).
-- **Refresh**: sin cuerpo. Lee el refresh token de la cookie y responde `{ token }` (un access token
-  nuevo), o 401 si no hay cookie, ha caducado o no es válida. El refresh token no cambia.
+- **Registro**: el cuerpo es `{ name, email, password }` (contraseña de 8 caracteres como mínimo; `role` no se acepta, todo usuario nuevo es `user`). Responde 201 con `{ user }` y **sin token**, 409
+  si el email ya existe o 422 si el cuerpo no es válido. El frontend redirige entonces a la página de login.
+- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, user }` o 401. `user` es `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña. El refresh token **no va en el
+  JSON**: se deja en la cookie `refreshToken` (HttpOnly, SameSite=Strict, Path=/auth, Max-Age de 7 días; Secure en producción).
+- **Refresh**: sin cuerpo. Lee el refresh token de la cookie y responde `{ token }` (un access token nuevo), o 401 si no hay cookie, ha caducado o no es válida. El refresh token no cambia.
 - **Logout**: sin cuerpo. Borra la cookie y responde 204. Después, `/auth/refresh` responde 401.
-- **Cookies y CORS**: el frontend llama a `/auth/*` con `withCredentials: true`; el backend responde
-  con `Access-Control-Allow-Credentials: true` y el origen exacto de `CORS_ORIGIN` (no vale `*`).
-- **Token**: se envía en la cabecera `Authorization: Bearer <token>`. Su payload lleva los claims `sub`
-  (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días. El
-  frontend guarda el access token solo en memoria (una signal), nunca en `localStorage` ni
-  `sessionStorage`; al recargar la página lo recupera llamando a `/auth/refresh` y después a
-  `/users/me`.
-- **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`)
-  o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol necesario.
-- **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde
-  `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
+- **Cookies y CORS**: el frontend llama a `/auth/*` con `withCredentials: true`; el backend responde con `Access-Control-Allow-Credentials: true` y el origen exacto de `CORS_ORIGIN` (no vale `*`).
+- **Token**: se envía en la cabecera `Authorization: Bearer <token>`. Su payload lleva los claims `sub` (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días.
+  El frontend guarda el access token solo en memoria (una signal), nunca en `localStorage` ni `sessionStorage`; al recargar la página lo recupera llamando a `/auth/refresh` y después a `/users/me`.
+- **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`) o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol
+  necesario.
+- **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
+- **Usuario**: `{ _id, name, email, role, birthDate?, degree?, lookingFor?, bio?, photo?, active, deleted, deletedAt?, createdAt, updatedAt }`, nunca con
+  contraseña. `photo` es una imagen PNG o JPG en base64 (`data:image/...;base64,...`, 200 000 caracteres como mucho).
+- **Usuarios inactivos y archivados**: no pueden iniciar sesión ni renovar el token (401 con el mensaje de siempre). Lo hace el prehook del modelo.
+- **Gestión de usuarios** (solo `admin`):
+  - `GET /users?page=&limit=&search=&role=&active=&degree=&archived=` responde `{ users, total, page, pages }`, ordenados por nombre. `search` busca en
+    nombre y email; `role` es `user` o `admin`; `active` es `true` o `false`; `degree` es una titulación entera; `archived=true` lista solo los
+    archivados (por defecto no salen). 400 si un filtro no es válido.
+  - `GET /users/:userId` responde `{ user }`, también si está inactivo o archivado; 404 si no existe.
+  - `POST /users` con `{ name, email, password, role?, active?, birthDate?, degree?, lookingFor?, bio?, photo? }` responde 201 `{ user }`; 409 si el
+    email existe, 422 si el cuerpo no vale.
+  - `PUT /users/:userId` con lo mismo salvo `password` (`name` y `email` obligatorios) responde 200 `{ user }`; 404 si no existe o está archivado.
+    `photo: ''` quita la foto.
+  - `POST /users/:userId/archive` (borrado lógico) responde 200 `{ user }` con `deleted: true`; 404 si no existe o ya estaba archivado.
+  - `POST /users/:userId/restore` responde 200 `{ user }`; 404 si no existe o no estaba archivado.
+  - `DELETE /users/:userId` (borrado físico) responde 204. Solo con usuarios archivados: si no, 409 `{ message: 'Archiva el usuario antes de eliminarlo' }`.
+  - Un admin no puede cambiarse su propio rol, desactivarse, archivarse ni eliminarse: 403 `{ message: 'No puedes hacer esto con tu propio usuario' }`.
 
 ## Tareas
 
@@ -51,7 +55,7 @@ LOGS.md.
 
 #### Backoffice (`backoffice`)
 
-- [ ] Lista de usuarios paginada con búsqueda y filtros · Miguel Ángel
+- [x] Lista de usuarios paginada con búsqueda y filtros · Miguel Ángel
 - [ ] Formulario de usuario: crear, editar, rol y activo · Miguel Ángel
 - [ ] Archivar, restaurar y eliminar desde el backoffice · Miguel Ángel
 - [ ] Acceso solo para admin (login y guards) · Miguel Ángel
@@ -102,3 +106,26 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   arrancados, en el navegador: el login de `admin@example.com` lleva a la página de inicio con el saludo; el único
   error de consola es el 401 de `/auth/refresh` al abrir la app sin sesión, que es lo esperado.
 - Prompt de IA usado: el mismo de la limpieza del repositorio (ver la entrada anterior).
+
+### 2026-11-03 · Lista de usuarios paginada con búsqueda y filtros
+
+- Antes de empezar se revisa cómo pagina el backend (`skip` y `limit` con `countDocuments`, respuesta `{ users, total, page, pages }`)
+  y se copia el contrato de la gestión de usuarios a este LOGS.md.
+- Pantalla `/users` (`components/users-list`), solo para admin (`authGuard` + `adminGuard`), con el mismo patrón que la lista de libros
+  del seminario: un `Subject` con `switchMap` pide cada página a la API y cancela la anterior si llega otra (por ejemplo, al escribir en
+  el buscador), y el componente `app-pagination` se reutiliza tal cual.
+- 10 usuarios por página. Filtros: buscador (nombre o email), rol, estado (activos o inactivos), titulación y "Ver archivados".
+  Al cambiar un filtro se vuelve a la página 1. El de titulación no existía en la API: se añadió en la rama `users` del backend.
+- `UserService.getUsers` solo envía los filtros que tienen valor (con `HttpParams`). El modelo `User` gana los campos del perfil y del
+  estado, y hay una lista `DEGREES` con las titulaciones de la EETAC para el filtro (y luego el formulario).
+- Componente nuevo `app-avatar`: la foto de perfil recortada en un círculo (`object-fit: cover`) o, si no hay foto, las iniciales sobre
+  un color que sale del nombre. Se usará en todas las listas.
+- `styles.css`: pastillas de estado (`.pill`) y tablas con la clase `stack`, que en el móvil se ven como tarjetas.
+- Navbar: enlace "Usuarios" solo para admin; la página de inicio tiene un botón "Gestionar usuarios".
+- Tests nuevos: `user.service.spec.ts` (que no se envían los filtros vacíos y sí los que tienen valor) y `users-list.spec.ts` (pinta una
+  fila por usuario con su estado, pide la página elegida y vuelve a la 1 con los filtros). El de `app` comprueba que el admin ve
+  "Usuarios" y un `user` no.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (9 ficheros, 34 tests). En el navegador con la
+  API y el seed: como admin, 12 usuarios en 2 páginas, los inactivos en gris, y "Ver archivados" enseña a Sara y Dani.
+- Prompt de IA usado: «Empezamos por la lista de usuarios paginada con búsqueda y filtros. Primero quiero ver cómo está montada la
+  paginación en el backend [...] quiero 10 usuarios por página y algunos filtros, los más típicos. ¿Qué filtros me sugieres?»

@@ -40,9 +40,15 @@ describe('App', () => {
     expect(await navLinks()).toEqual(['Iniciar sesión', 'Registrarse']);
   });
 
-  it('with a session the navigation bar no longer offers login and register', async () => {
+  it('an admin sees the backoffice link', async () => {
     await setup();
     loginAs('admin');
+    expect(await navLinks()).toEqual(['Usuarios']);
+  });
+
+  it('a user does not see the backoffice link', async () => {
+    await setup();
+    loginAs('user');
     expect(await navLinks()).toEqual([]);
   });
 });

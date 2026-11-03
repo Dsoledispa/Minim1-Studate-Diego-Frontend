@@ -1,0 +1,36 @@
+.count {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+}
+
+/* Foto y, al lado, el nombre con el email debajo */
+.person {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.who {
+  display: grid;
+  line-height: 1.25;
+}
+
+.who small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.switch {
+  margin-left: auto;
+  font-weight: normal;
+}
+
+/* Un usuario inactivo se ve en gris */
+tr.inactive td {
+  color: var(--muted);
+}
+
+/* Los filtros, juntos a la izquierda (en styles.css la barra los separa a los dos extremos) */
+.toolbar {
+  justify-content: flex-start;
+}

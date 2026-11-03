@@ -4,4 +4,10 @@
   <p class="muted">Has iniciado sesión como {{ user.email }} con el rol {{ user.role }}.</p>
 
   <p>Bienvenido a Studate. Desde aquí se gestionarán los usuarios, los votos de La Orla y los Dates.</p>
+
+  @if (auth.isAdmin()) {
+    <div class="form-actions">
+      <a class="button" routerLink="/users">Gestionar usuarios</a>
+    </div>
+  }
 }
