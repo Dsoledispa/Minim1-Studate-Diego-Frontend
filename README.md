@@ -5,7 +5,11 @@ propia universidad. Es el proyecto del Grupo 3 de EA (María Cazorla, Diego Sole
 Quiroga).
 
 En el Sprint 1 (el mínimo 1) el objetivo es el **backoffice**: la zona de administración, en la que solo
-entra un `admin`, para gestionar los usuarios y sus roles, los votos de La Orla y los Dates.
+entra un `admin`, para gestionar los usuarios y sus roles y los votos de La Orla. La app tiene dos zonas:
+
+- **Dates**: la pantalla de entrada para cualquier usuario con sesión. Cada uno ve y gestiona sus Dates
+  (las citas que se abren cuando dos usuarios se dan A+); el admin ve todos.
+- **Backoffice** (Usuarios y La Orla): solo para `admin`.
 
 El proyecto parte del ejercicio del Seminario 7 (login con JWT, refresh token en cookie HttpOnly,
 interceptor, guards y paginación del servidor), que se guarda tal cual en el tag `seminari7-base`.
@@ -106,7 +110,7 @@ export const environment = {
 | Comando | Qué hace |
 |---|---|
 | `npm start` | Servidor de desarrollo en http://localhost:4200. Se recarga solo al guardar |
-| `npm test` | Pasa los tests con Vitest y se queda esperando cambios (`npm test -- --watch=false` para pasarlos una vez) |
+| `npm test` | Pasa los tests con Vitest (16 ficheros, 60 tests) y se queda esperando cambios (`npm test -- --watch=false` para pasarlos una vez) |
 | `npm run lint` | Pasa angular-eslint sobre los `.ts` y los `.html` de `src/` |
 | `npm run build` | Compila la versión de producción en `dist/backoffice/browser` |
 | `npx ng generate component components/<nombre>` | Crea un componente nuevo con el CLI del proyecto |
