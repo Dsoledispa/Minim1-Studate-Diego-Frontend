@@ -81,8 +81,9 @@ Y se abre http://localhost:4200. La página se recarga sola cada vez que guardas
 
 | Email | Contraseña | Qué ve |
 |---|---|---|
-| `admin@example.com` | `seminari7` | La página de inicio (las pantallas de Studate llegan en sus ramas) |
-| `user@example.com` | `seminari7` | Solo la página de inicio: el backoffice es para administradores |
+| `admin@example.com` | `studate26` | El backoffice: entra directamente en Usuarios |
+| `user@example.com` | `studate26` | La página de inicio: el backoffice es solo para administradores |
+| `aina@example.com` | `studate26` | Nada: está inactiva y la API no la deja entrar |
 
 También se puede crear una cuenta en "Registrarse". Las cuentas nuevas son siempre de rol `user`.
 
@@ -117,6 +118,9 @@ export const environment = {
 | `/login` | Iniciar sesión | Solo sin sesión |
 | `/register` | Crear una cuenta | Solo sin sesión |
 | `/` | Inicio: saludo y rol | Con sesión |
+| `/users` | Backoffice: lista de usuarios, 10 por página, con buscador y filtros (rol, estado, titulación y archivados). Archivar, restaurar y eliminar para siempre | Admin |
+| `/users/new` | Backoffice: nuevo usuario, con rol, activo, perfil y foto | Admin |
+| `/users/:id/edit` | Backoffice: editar usuario (sin contraseña) | Admin |
 
 Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o al inicio (un `user` que
 intenta entrar en el backoffice).
@@ -137,13 +141,17 @@ src/
       login/               Iniciar sesión
       register/            Crear una cuenta
       home/                Página de inicio para cualquier usuario con sesión
+      users-list/          Backoffice: lista de usuarios con filtros, archivar, restaurar y eliminar
+      user-form/           Backoffice: crear y editar usuarios (rol, activo, perfil y foto)
+      avatar/              Foto de perfil recortada en un círculo, o las iniciales si no hay foto
       pagination/          Paginación, componente hijo de las listas
       confirm-modal/       Ventana para confirmar antes de borrar
       view-toggle/         Botones para ver las listas en tabla o en tarjetas
     models/                Interfaces TypeScript con la forma de los datos de la API
-      user.model.ts          User, UserRole y las peticiones y respuestas de /auth
+      user.model.ts          User, UserRole, DEGREES, los filtros y las peticiones y respuestas de /auth y /users
     services/              Las únicas piezas que hablan con la API (HttpClient)
       auth.service.ts        register, login, refresh, restoreSession, logout; token y usuario en signals
+      user.service.ts        getUsers, getUser, createUser, updateUser, archiveUser, restoreUser, deleteUser
     pipes/                 Formatean datos en la plantilla
       truncate-pipe.ts       Corta textos largos con "..."
     interceptors/
@@ -153,6 +161,7 @@ src/
     utils/
       api-error.ts         Pasa un error de HttpClient a un texto para la pantalla
       remove-empty.ts      Quita los campos vacíos antes de enviar un formulario
+      image-to-data-url.ts Reduce la foto elegida a 256 x 256 y la pasa a base64 para enviarla a la API
       password-match.ts    Validador: la contraseña y su repetición coinciden
 ```
 
@@ -182,7 +191,11 @@ Cómo funciona por dentro (interceptor, guards, renovación del token) está en 
    `restoreSession()` llama a `/auth/refresh` y a `GET /users/me` para recuperar la sesión; si la cookie
    no vale, la app arranca sin sesión y `authGuard` lleva al login.
 5. "Cerrar sesión" llama a `POST /auth/logout`, que borra la cookie, y olvida el token de memoria.
-6. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol.
+6. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol. El backoffice
+   (todo lo que cuelga de `/users`) lleva `authGuard` y `adminGuard`: solo entra un admin. En la barra
+   de arriba, sus enlaces van detrás de la etiqueta "Backoffice" y un `user` no los ve.
+7. Si un admin desactiva o archiva a alguien que tiene la sesión abierta, su siguiente petición recibe
+   un 401 "Tu cuenta no está activa" y el interceptor le cierra la sesión.
 
 ### Dónde se guardan los tokens: localStorage o cookie HttpOnly
 
@@ -222,6 +235,11 @@ guard, pero la API seguiría respondiendo 401 o 403.
 - Un campo opcional que se deja vacío al editar no se borra. La API rechaza los valores vacíos, así
   que el formulario no los envía (`utils/remove-empty.ts`) y la API deja el valor que tenía.
 - Los mensajes de error de validación que devuelve la API (422) vienen en inglés, de Joi.
+- Los usuarios no se borran de golpe: primero se archivan (borrado lógico, se pueden restaurar) y solo
+  un usuario archivado se puede eliminar para siempre (borrado físico). Un admin no puede cambiarse el
+  rol, desactivarse, archivarse ni eliminarse a sí mismo (403).
+- La foto de perfil se guarda en el propio usuario como texto en base64. El formulario la reduce antes
+  de enviarla para que no pase del límite de la API.
 
 ## Cómo contribuir
 

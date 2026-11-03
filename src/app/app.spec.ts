@@ -17,7 +17,7 @@ describe('App', () => {
 
   // La sesión ya no se lee de localStorage: se prepara con un login simulado
   function loginAs(role: 'user' | 'admin'): void {
-    TestBed.inject(AuthService).login({ email: 'x@y.z', password: 'seminari7' }).subscribe();
+    TestBed.inject(AuthService).login({ email: 'x@y.z', password: 'studate26' }).subscribe();
     TestBed.inject(HttpTestingController)
       .expectOne(`${environment.apiUrl}/auth/login`)
       .flush({ token: 't', user: { _id: 'u1', name: 'X', email: 'x@y.z', role } });

@@ -59,9 +59,9 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 - [x] Lista de usuarios paginada con búsqueda y filtros · Miguel Ángel
 - [x] Formulario de usuario: crear, editar, rol y activo · Miguel Ángel
 - [x] Archivar, restaurar y eliminar desde el backoffice · Miguel Ángel
-- [ ] Acceso solo para admin (login y guards) · Miguel Ángel
-- [ ] Tests del frontend (dentro de cada rama) · Miguel Ángel
-- [ ] README del frontend (al cerrar cada rama) · Miguel Ángel
+- [x] Acceso solo para admin (login y guards) · Miguel Ángel
+- [x] Tests del frontend (dentro de cada rama) · Miguel Ángel
+- [x] README del frontend (al cerrar cada rama) · Miguel Ángel
 
 #### La Orla (`grades`)
 
@@ -176,3 +176,26 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   seguro?" (en MongoDB ya no está) y restaurar a Sara (en MongoDB vuelve a `deleted: false`).
 - Prompt de IA usado: «Ahora archivar, restaurar y eliminar desde el backoffice [...] Cuando quiera eliminar para siempre, que me salga un
   modal de "¿Estás seguro de que quieres eliminar esto?" y, si le doy, se elimina. ¿Cómo lo harías? Plan de acción.»
+
+### 2026-11-03 · Backoffice solo para admin y adaptado a Studate
+
+- Con la zona de usuarios hecha, se repasa el backoffice entero para que solo lo use un admin: todas sus rutas (`/users`, `/users/new`,
+  `/users/:id/edit`) llevan `authGuard` y `adminGuard`, y en la barra de arriba sus enlaces van detrás de la etiqueta "Backoffice", que un
+  `user` no ve. El registro se queda: es por donde entra la gente normal; el backoffice es una zona aparte dentro de la misma app.
+- Después del login, un admin va directo a `/users` y un `user` a la página de inicio, que le explica que el backoffice es solo para
+  administradores. Con `returnUrl` se respeta a dónde iba.
+- Aspecto de Studate (el del mockup), sin cambiar la estructura del seminario: la paleta en variables de `styles.css` (el índigo un poco más
+  vivo, el coral de la marca y grises con un toque de azul), barra oscura con "Stu**date**" y la página actual subrayada en coral, radios de 8
+  px y un contorno visible al moverse con el teclado.
+- Móvil: la barra hace salto de línea y la sesión baja a su propia fila; en la lista de usuarios cada filtro ocupa toda la fila. Problema
+  encontrado al probarlo con el ancho de un móvil: el select de titulaciones era más ancho que la pantalla y salía scroll horizontal; se
+  limita su ancho.
+- Tests: el de login comprueba que un admin va a `/users` y uno nuevo que un `user` va al inicio. Los specs dejan de usar la contraseña del
+  seminario (`seminari7`) y usan la del seed nuevo.
+- README: usuarios de ejemplo, pantallas del backoffice, estructura del proyecto (componentes, service y utilidad nuevos), qué protege cada
+  guard y las reglas de la API que hay que saber (archivado, eliminar y foto).
+- Pruebas del bloque `backoffice`: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (10 ficheros, 44 tests). En el
+  navegador, con el seed recién hecho: login de admin (va a Usuarios), lista con filtros y archivados, crear un usuario con foto, archivar,
+  eliminar para siempre con el modal, restaurar, y la misma lista con 390 px de ancho (tarjetas, sin scroll horizontal).
+- Prompt de IA usado: «Ahora que ya tenemos la zona de usuarios, esto lo tienen que administrar los administradores. Hay que rehacer el
+  backoffice bien hecho: login y guards solo para admin, y adaptarlo a los modelos nuevos. Plan de acción.»

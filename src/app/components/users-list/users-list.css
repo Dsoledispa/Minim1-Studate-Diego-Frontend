@@ -34,3 +34,21 @@ tr.inactive td {
 .toolbar {
   justify-content: flex-start;
 }
+
+/* Las titulaciones son largas: el select nunca puede ser más ancho que la pantalla */
+.toolbar select {
+  max-width: 100%;
+}
+
+/* En el móvil, cada filtro ocupa toda la fila */
+@media (max-width: 680px) {
+  .toolbar .search,
+  .toolbar select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .switch {
+    margin-left: 0;
+  }
+}

@@ -1,16 +1,21 @@
 /* Estilos comunes a todas las pantallas. Lo que es de un solo componente va en su .css */
 
+/* Los colores de Studate: el índigo del seminario un poco más vivo, el coral de la marca (--accent)
+   y grises con un toque de azul. Todo el resto de colores sale de estas variables */
 :root {
-  --primary: #3949ab;
-  --primary-dark: #283593;
+  --primary: #3b3fb6;
+  --primary-dark: #2a2d8f;
+  --primary-light: #ecedfb;
+  --accent: #e8615a;
+  --navbar: #24265f;
   --danger: #c62828;
   --danger-light: #fdecea;
-  --text: #1f2933;
-  --muted: #6b7280;
-  --border: #d9dde3;
-  --background: #f4f5f7;
+  --text: #1d2036;
+  --muted: #666b82;
+  --border: #dcdeea;
+  --background: #f5f5fa;
   --surface: #ffffff;
-  --radius: 6px;
+  --radius: 8px;
 
   color: var(--text);
   font-family:
@@ -32,7 +37,8 @@ body {
 
 h1 {
   margin: 0 0 1rem;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
+  text-wrap: balance;
 }
 
 a {
@@ -70,7 +76,18 @@ button.secondary {
 }
 
 button.secondary:hover:not(:disabled) {
-  background: #eef0fb;
+  background: var(--primary-light);
+}
+
+/* Se ve bien a dónde va el teclado (tabulador) */
+button:focus-visible,
+.button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #9ea2f0;
+  outline-offset: 2px;
 }
 
 button.danger {
@@ -112,7 +129,8 @@ td {
 }
 
 th {
-  background: #eef0f4;
+  background: var(--head);
+  font-size: 0.85rem;
   font-weight: 600;
 }
 
@@ -274,7 +292,7 @@ label.checkbox {
 
 /* Fondo de las cabeceras de tabla y de los huecos sin foto */
 :root {
-  --head: #eef0f4;
+  --head: #eef0f7;
   --ok: #1f7a4d;
   --ok-light: #e3f4ea;
   --warn: #9a5b00;
@@ -294,7 +312,7 @@ label.checkbox {
 }
 
 .pill.admin {
-  background: #e8e9fb;
+  background: var(--primary-light);
   color: var(--primary);
 }
 

@@ -31,7 +31,7 @@ describe('authInterceptor', () => {
     navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
     // El token ya no está en localStorage: la sesión se prepara con un login simulado
-    auth.login({ email: 'admin@example.com', password: 'seminari7' }).subscribe();
+    auth.login({ email: 'admin@example.com', password: 'studate26' }).subscribe();
     httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({
       token: 'access-1',
       user: { _id: 'u1', name: 'Admin', email: 'a@b.c', role: 'admin' },
