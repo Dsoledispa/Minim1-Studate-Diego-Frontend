@@ -44,6 +44,16 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
   - `POST /users/:userId/restore` responde 200 `{ user }`; 404 si no existe o no estaba archivado.
   - `DELETE /users/:userId` (borrado físico) responde 204. Solo con usuarios archivados: si no, 409 `{ message: 'Archiva el usuario antes de eliminarlo' }`.
   - Un admin no puede cambiarse su propio rol, desactivarse, archivarse ni eliminarse: 403 `{ message: 'No puedes hacer esto con tu propio usuario' }`.
+  - Al eliminar un usuario para siempre se borran también sus votos de La Orla.
+- **Voto de La Orla (Grade)**: `{ _id, from, to, value, createdAt, updatedAt }`. `from` (quien vota) y `to` (a quien) llegan como
+  `{ _id, name, email, photo? }`, también si el usuario está inactivo. `value` es `'A+'` o `'F'`. Un solo voto por pareja (from, to).
+- **Votos de La Orla** (solo `admin`):
+  - `GET /grades?page=&limit=&value=&user=` responde `{ grades, total, page, pages }`, primero los más nuevos. `user` deja los votos en los que
+    ese usuario vota o es votado. 400 si un filtro no es válido.
+  - `GET /grades/:gradeId` responde `{ grade }`; 404 si no existe.
+  - `POST /grades` con `{ from, to, value }` responde 201 `{ grade }`; 409 si la pareja ya tiene voto; 422 si `from` y `to` son el mismo usuario
+    (`{ message: 'Un usuario no se puede votar a sí mismo' }`) o el cuerpo no vale; 404 si `from` o `to` no existen.
+  - `PUT /grades/:gradeId` con `{ value }` responde 200 `{ grade }`. `DELETE /grades/:gradeId` responde 204 (borrado físico).
 
 ## Tareas
 
@@ -65,7 +75,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 
 #### La Orla (`grades`)
 
-- [ ] Pantallas de Grade · María
+- [x] Pantallas de Grade · María
 
 #### Dates (`dates`)
 
@@ -199,3 +209,24 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   eliminar para siempre con el modal, restaurar, y la misma lista con 390 px de ancho (tarjetas, sin scroll horizontal).
 - Prompt de IA usado: «Ahora que ya tenemos la zona de usuarios, esto lo tienen que administrar los administradores. Hay que rehacer el
   backoffice bien hecho: login y guards solo para admin, y adaptarlo a los modelos nuevos. Plan de acción.»
+
+### 2026-11-03 · Pantallas de La Orla (Grade)
+
+- El mockup de la pantalla ya estaba hecho y validado (la pantalla "La Orla" del artifact del backoffice): se implementa tal cual.
+- `/grades` (`components/grades-list`), solo admin: tabla con quién vota y a quién (con `app-avatar`), la nota (A+ en verde, F en rojo, con
+  class binding), la fecha (pipe `date`) y las acciones "Cambiar a F/A+" (PUT, sin confirmación porque se puede volver a cambiar) y
+  "Eliminar" (con `confirm-modal`). Filtros por nota y por usuario, 10 por página, mismo patrón `Subject` + `switchMap` que los usuarios.
+- `/grades/new` (`components/grade-form`): quién vota, a quién y la nota. En los selects solo salen los usuarios activos de rol `user`, y
+  un validador de grupo (`differentUsersValidator`, como `passwordMatch`) no deja votarse a uno mismo. Un 409 (pareja repetida) enseña el
+  mensaje de la API.
+- Responsive desde el principio: la tabla lleva la clase `stack` y en el móvil cada voto es una tarjeta; los filtros ocupan toda la fila.
+- El bloque `.person` (foto, nombre y email) se usaba ya en dos pantallas: pasa de los `.css` de cada componente a `styles.css`.
+- `grade.model.ts` y `GradeService` (`getGrades`, `createGrade`, `updateGrade` y `deleteGrade`). Contrato de Grade copiado del backend.
+- Navbar: "La Orla" en la zona del backoffice; la página de inicio del admin tiene el acceso.
+- Tests nuevos: service (filtros, crear, cambiar nota y eliminar), lista (pinta el voto, cambia A+ a F y recarga, filtra por nota desde la
+  página 1 y elimina tras confirmar) y formulario (no deja votarse a sí mismo, pide solo usuarios activos de rol user y envía el voto).
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (13 ficheros, 52 tests). En el navegador: la
+  lista con los 25 votos del seed en 3 páginas; en el formulario, el aviso al elegir el mismo usuario en los dos lados y un voto nuevo de
+  Clara a Pau que aparece el primero; y la misma lista con 390 px de ancho (tarjetas).
+- Prompt de IA usado: «Ahora las pantallas de La Orla (Grade). Antes de programar, hazme un mockup para ver cómo quedaría esta pantalla.» y
+  «Y si luego hay que usarlo desde el teléfono, que esta pantalla sea responsive, que se vea bien en el móvil.»

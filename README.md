@@ -121,6 +121,8 @@ export const environment = {
 | `/users` | Backoffice: lista de usuarios, 10 por página, con buscador y filtros (rol, estado, titulación y archivados). Archivar, restaurar y eliminar para siempre | Admin |
 | `/users/new` | Backoffice: nuevo usuario, con rol, activo, perfil y foto | Admin |
 | `/users/:id/edit` | Backoffice: editar usuario (sin contraseña) | Admin |
+| `/grades` | Backoffice: La Orla, los votos (quién vota a quién, A+ o F), con filtros por nota y por usuario. Cambiar la nota y eliminar | Admin |
+| `/grades/new` | Backoffice: nuevo voto | Admin |
 
 Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o al inicio (un `user` que
 intenta entrar en el backoffice).
@@ -143,15 +145,19 @@ src/
       home/                Página de inicio para cualquier usuario con sesión
       users-list/          Backoffice: lista de usuarios con filtros, archivar, restaurar y eliminar
       user-form/           Backoffice: crear y editar usuarios (rol, activo, perfil y foto)
+      grades-list/         Backoffice: La Orla, la lista de votos con filtros, cambiar la nota y eliminar
+      grade-form/          Backoffice: crear un voto
       avatar/              Foto de perfil recortada en un círculo, o las iniciales si no hay foto
       pagination/          Paginación, componente hijo de las listas
       confirm-modal/       Ventana para confirmar antes de borrar
       view-toggle/         Botones para ver las listas en tabla o en tarjetas
     models/                Interfaces TypeScript con la forma de los datos de la API
       user.model.ts          User, UserRole, DEGREES, los filtros y las peticiones y respuestas de /auth y /users
+      grade.model.ts         Grade, GradeValue y las peticiones y respuestas de /grades
     services/              Las únicas piezas que hablan con la API (HttpClient)
       auth.service.ts        register, login, refresh, restoreSession, logout; token y usuario en signals
       user.service.ts        getUsers, getUser, createUser, updateUser, archiveUser, restoreUser, deleteUser
+      grade.service.ts       getGrades, createGrade, updateGrade, deleteGrade
     pipes/                 Formatean datos en la plantilla
       truncate-pipe.ts       Corta textos largos con "..."
     interceptors/
@@ -192,7 +198,7 @@ Cómo funciona por dentro (interceptor, guards, renovación del token) está en 
    no vale, la app arranca sin sesión y `authGuard` lleva al login.
 5. "Cerrar sesión" llama a `POST /auth/logout`, que borra la cookie, y olvida el token de memoria.
 6. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol. El backoffice
-   (todo lo que cuelga de `/users`) lleva `authGuard` y `adminGuard`: solo entra un admin. En la barra
+   (todo lo que cuelga de `/users` y de `/grades`) lleva `authGuard` y `adminGuard`: solo entra un admin. En la barra
    de arriba, sus enlaces van detrás de la etiqueta "Backoffice" y un `user` no los ve.
 7. Si un admin desactiva o archiva a alguien que tiene la sesión abierta, su siguiente petición recibe
    un 401 "Tu cuenta no está activa" y el interceptor le cierra la sesión.

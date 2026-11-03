@@ -330,6 +330,23 @@ label.checkbox {
   color: var(--warn);
 }
 
+/* Un usuario en una lista: su foto (app-avatar) y, al lado, el nombre con el email debajo */
+.person {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.who {
+  display: grid;
+  line-height: 1.25;
+}
+
+.who small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 /* La tabla va dentro de una caja con scroll horizontal, por si no cabe */
 .table-wrap {
   overflow-x: auto;
