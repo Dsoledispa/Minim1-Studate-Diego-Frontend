@@ -27,6 +27,8 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 - **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`) o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol
   necesario.
 - **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
+- **Con quién abrir un Date**: `GET /users/directory` (con sesión, cualquier rol) responde `{ users: [{ _id, name, degree?, photo? }] }`: los demás usuarios
+  de rol `user` activos, ordenados por nombre.
 - **Usuario**: `{ _id, name, email, role, birthDate?, degree?, lookingFor?, bio?, photo?, active, deleted, deletedAt?, createdAt, updatedAt }`, nunca con
   contraseña. `photo` es una imagen PNG o JPG en base64 (`data:image/...;base64,...`, 200 000 caracteres como mucho).
 - **Usuarios inactivos y archivados**: no pueden iniciar sesión ni renovar el token (401 con el mensaje de siempre). Lo hace el prehook del modelo.
@@ -44,7 +46,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
   - `POST /users/:userId/restore` responde 200 `{ user }`; 404 si no existe o no estaba archivado.
   - `DELETE /users/:userId` (borrado físico) responde 204. Solo con usuarios archivados: si no, 409 `{ message: 'Archiva el usuario antes de eliminarlo' }`.
   - Un admin no puede cambiarse su propio rol, desactivarse, archivarse ni eliminarse: 403 `{ message: 'No puedes hacer esto con tu propio usuario' }`.
-  - Al eliminar un usuario para siempre se borran también sus votos de La Orla.
+  - Al eliminar un usuario para siempre se borran también sus votos de La Orla y sus Dates.
 - **Voto de La Orla (Grade)**: `{ _id, from, to, value, createdAt, updatedAt }`. `from` (quien vota) y `to` (a quien) llegan como
   `{ _id, name, email, photo? }`, también si el usuario está inactivo. `value` es `'A+'` o `'F'`. Un solo voto por pareja (from, to).
 - **Votos de La Orla** (solo `admin`):
@@ -54,6 +56,19 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
   - `POST /grades` con `{ from, to, value }` responde 201 `{ grade }`; 409 si la pareja ya tiene voto; 422 si `from` y `to` son el mismo usuario
     (`{ message: 'Un usuario no se puede votar a sí mismo' }`) o el cuerpo no vale; 404 si `from` o `to` no existen.
   - `PUT /grades/:gradeId` con `{ value }` responde 200 `{ grade }`. `DELETE /grades/:gradeId` responde 204 (borrado físico).
+  - Si al crear un A+ o al cambiar un voto a A+ ya existe el A+ contrario, se abre un Date entre los dos (si no lo había ya).
+- **Date**: `{ _id, users, status, firstTurn, expiresAt, extended, createdAt, updatedAt }`. `users` son los dos usuarios como `{ _id, name, email,
+  photo? }`; `status` es `'pending'` (Pendiente), `'ongoing'` (En curso) o `'closed'` (Cerrado); `firstTurn` es el id del usuario al que le toca
+  escribir primero (sorteado); `expiresAt` es 24 horas después de abrirse; `extended` dice si ya se usó la prórroga. Un solo Date por pareja.
+- **Dates** (cualquier usuario con sesión; el admin ve todos y un usuario normal solo los suyos):
+  - `GET /dates?page=&limit=&status=&user=` responde `{ dates, total, page, pages }`, primero los más nuevos. `user` solo lo usa el admin.
+  - `GET /dates/:dateId` responde `{ date }`; 404 si no existe o es de otros.
+  - `POST /dates` con `{ users: [idA, idB] }` responde 201 `{ date }`; 403 si un usuario normal no es uno de los dos; 409 si ya hay un Date entre
+    ellos (`{ message: 'Ya hay un Date entre estos dos usuarios' }`); 404 si alguno no existe; 422 si no son dos ids distintos.
+  - `PUT /dates/:dateId` con `{ status }` responde 200 `{ date }`; 404 si no existe o es de otros.
+  - `POST /dates/:dateId/extend` suma 24 horas a `expiresAt` y pone `extended: true`; 409 si ya se usó
+    (`{ message: 'La prórroga de este Date ya se ha usado' }`).
+  - `DELETE /dates/:dateId` (solo admin) responde 204.
 
 ## Tareas
 
@@ -79,7 +94,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 
 #### Dates (`dates`)
 
-- [ ] Pantallas de Date · María
+- [x] Pantallas de Date · María
 
 ## Bitácora
 
@@ -230,3 +245,31 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   Clara a Pau que aparece el primero; y la misma lista con 390 px de ancho (tarjetas).
 - Prompt de IA usado: «Ahora las pantallas de La Orla (Grade). Antes de programar, hazme un mockup para ver cómo quedaría esta pantalla.» y
   «Y si luego hay que usarlo desde el teléfono, que esta pantalla sea responsive, que se vea bien en el móvil.»
+
+### 2026-11-03 · Pantallas de Date
+
+- Como en La Orla, el mockup ya estaba validado (pantalla "Dates" del artifact, con la vista del admin y la de "Mis Dates" del usuario) y se
+  hace responsive desde el principio (tabla `stack`).
+- `/dates` (`components/dates-list`) es la pantalla de entrada para todos después del login: la ruta `''` redirige allí y desaparece la página
+  de inicio, que ya no tenía uso. Pestañas con las bandejas del blog (Pendientes, la de entrada, En curso, Cerrados y Todos), estado con un
+  select que cambia de bandeja, caducidad (pipe `date`, con "caducado" si ya pasó), prórroga (+24 h, el botón se deshabilita cuando se usa y
+  un 409 enseña el mensaje de la API) y paginación.
+- Lo que se ve depende del rol (la API ya filtra por el token):
+  - El admin ve "Dates": las dos personas de cada pareja, en negrita la que escribe primero, filtro por usuario y "Eliminar" con el modal.
+  - Un usuario ve "Mis Dates": "Con" (la otra persona), "Empieza" ("Tú" o su nombre) y sin eliminar.
+- `/dates/new` (`components/date-form`): el admin elige a los dos usuarios (validador de grupo para que no sean el mismo); un usuario normal
+  elige solo "con quién", y él es el otro. Para la lista, el usuario normal no puede usar `GET /users` (es del backoffice): se añadió
+  `GET /users/directory` en el backend (rama `dates`).
+- El modelo se llama `StudateDate` y no `Date`: con `Date` como interfaz, `new Date()` dejaría de ser una fecha en los componentes que la usan
+  (en `dates-list` se usa para saber si un Date ha caducado). En el backend pasa lo mismo con `DateModel`.
+- Navbar: "Dates" para cualquiera con sesión, delante de la zona del backoffice. Después del login todos van a `/dates`. La ayuda del formulario
+  de votos ("si los dos se han dado A+, se abre un Date") se añade ahora, que ya es verdad.
+- Tests nuevos: service (filtro de estado, abrir, cambiar estado, prórroga y eliminar), lista (un `user` ve con quién y quién empieza y no tiene
+  "Eliminar"; el admin ve a los dos y "Eliminar"; cambiar de pestaña pide desde la página 1; el 409 de la prórroga enseña el mensaje) y formulario
+  (el `user` usa el directorio y es uno de los dos; el admin no puede elegir dos veces al mismo). Se actualizan los de login y app.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (16 ficheros, 60 tests). En el navegador: con una
+  sesión abierta de antes del seed, la API responde 401 y la app lleva al login (el arreglo de usuarios inactivos funcionando); como `user`, solo su
+  Date con Oriol ("Empieza: Tú"), la prórroga suma 24 horas y se deshabilita, abre un Date con Laia y `/users` lo devuelve a Dates; como admin,
+  los 5 Dates con las dos personas, "caducado" en el cerrado y el filtro por usuario; y con 390 px de ancho, tarjetas.
+- Prompt de IA usado: «Las pantallas de Dates, igual que las de La Orla: primero el mockup para verlo, y responsive desde el principio para que se
+  vea en el móvil.»

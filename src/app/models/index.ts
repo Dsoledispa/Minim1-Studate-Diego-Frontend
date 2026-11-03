@@ -24,3 +24,14 @@ export type {
   GradeValue,
 } from './grade.model';
 export { GRADE_VALUES } from './grade.model';
+export type {
+  CreateDate,
+  DateFilters,
+  DateResponse,
+  DatesPage,
+  DateStatus,
+  DirectoryResponse,
+  DirectoryUser,
+  StudateDate,
+} from './date.model';
+export { DATE_STATUS_LABELS } from './date.model';
