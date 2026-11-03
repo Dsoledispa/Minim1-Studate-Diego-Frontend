@@ -1,5 +1,15 @@
 <header class="navbar">
-  <a class="brand" routerLink="/">Studate</a>
+  <a class="brand" routerLink="/">Stu<span>date</span></a>
+
+  <!-- La zona del backoffice solo la ve un admin. Ocultarla es comodidad, no seguridad:
+       si un user escribe la URL, adminGuard lo devuelve al inicio y la API responde 403 -->
+  @if (auth.isAdmin()) {
+    <span class="zone">Backoffice</span>
+    <!-- routerLinkActive le pone la clase "active" al enlace de la página en la que estoy -->
+    <nav>
+      <a routerLink="/users" routerLinkActive="active">Usuarios</a>
+    </nav>
+  }
 
   <div class="session">
     @if (auth.user(); as user) {

@@ -40,10 +40,12 @@ export class Login {
     this.saving.set(true);
     this.error.set('');
     this.auth.login(this.form.getRawValue()).subscribe({
-      // Solo acepto rutas de esta app (empiezan por /) para no mandar a nadie a otra web
+      // Solo acepto rutas de esta app (empiezan por /) para no mandar a nadie a otra web.
+      // Sin returnUrl, el admin va directo al backoffice y un user a la página de inicio
       next: () => {
         const returnUrl = this.returnUrl();
-        this.router.navigateByUrl(returnUrl?.startsWith('/') ? returnUrl : '/', {
+        const home = this.auth.isAdmin() ? '/users' : '/';
+        this.router.navigateByUrl(returnUrl?.startsWith('/') ? returnUrl : home, {
           replaceUrl: true,
         });
       },

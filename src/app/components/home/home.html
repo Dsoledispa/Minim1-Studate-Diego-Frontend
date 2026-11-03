@@ -3,5 +3,12 @@
   <h1>Hola, {{ user.name }}</h1>
   <p class="muted">Has iniciado sesión como {{ user.email }} con el rol {{ user.role }}.</p>
 
-  <p>Bienvenido a Studate. Desde aquí se gestionarán los usuarios, los votos de La Orla y los Dates.</p>
+  @if (auth.isAdmin()) {
+    <p>Desde el backoffice gestionas los usuarios de Studate.</p>
+    <div class="form-actions">
+      <a class="button" routerLink="/users">Gestionar usuarios</a>
+    </div>
+  } @else {
+    <p>Bienvenido a Studate. El backoffice es solo para administradores.</p>
+  }
 }
