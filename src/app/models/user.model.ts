@@ -43,6 +43,29 @@ export interface UserFilters {
   archived: boolean;
 }
 
+// POST /users: lo que envía el formulario al crear un usuario desde el backoffice.
+// A diferencia del registro, el admin elige el rol y si está activo
+export interface CreateUser {
+  name: string;
+  email: string;
+  password: string;
+  role?: UserRole;
+  active?: boolean;
+  birthDate?: string;
+  degree?: string;
+  lookingFor?: string;
+  bio?: string;
+  photo?: string;
+}
+
+// PUT /users/:id: lo mismo sin la contraseña (desde el backoffice no se cambia)
+export type UpdateUser = Omit<CreateUser, 'password'>;
+
+// Respuesta de GET, POST y PUT de un usuario
+export interface UserResponse {
+  user: User;
+}
+
 // GET /users: una página de usuarios y los datos de paginación
 export interface UsersPage {
   users: User[];

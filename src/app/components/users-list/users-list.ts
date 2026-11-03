@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { EMPTY, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
 
 import { DEGREES, User, UserFilters } from '../../models';
@@ -17,7 +18,7 @@ export const PAGE_SIZE = 10;
 // cambia la página o un filtro se pide la página que toca, como hacía la lista de libros del seminario
 @Component({
   selector: 'app-users-list',
-  imports: [FormsModule, Avatar, Pagination],
+  imports: [FormsModule, RouterLink, Avatar, Pagination],
   templateUrl: './users-list.html',
   styleUrl: './users-list.css',
 })

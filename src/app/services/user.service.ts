@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { UserFilters, UsersPage } from '../models';
+import { CreateUser, UpdateUser, UserFilters, UserResponse, UsersPage } from '../models';
 
 // Las llamadas a la gestión de usuarios del backoffice (/users). Todas son solo para admin:
 // el interceptor añade el token y la API responde 403 si quien llama no es admin
@@ -33,5 +33,20 @@ export class UserService {
     }
 
     return this.http.get<UsersPage>(this.baseUrl, { params });
+  }
+
+  /** GET /users/:id (también si está inactivo o archivado) */
+  getUser(id: string): Observable<UserResponse> {
+    return this.http.get<UserResponse>(`${this.baseUrl}/${id}`);
+  }
+
+  /** POST /users */
+  createUser(payload: CreateUser): Observable<UserResponse> {
+    return this.http.post<UserResponse>(this.baseUrl, payload);
+  }
+
+  /** PUT /users/:id */
+  updateUser(id: string, payload: UpdateUser): Observable<UserResponse> {
+    return this.http.put<UserResponse>(`${this.baseUrl}/${id}`, payload);
   }
 }

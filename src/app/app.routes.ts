@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { Home } from './components/home/home';
 import { Login } from './components/login/login';
 import { Register } from './components/register/register';
+import { UserForm } from './components/user-form/user-form';
 import { UsersList } from './components/users-list/users-list';
 import { adminGuard, authGuard, guestGuard } from './guards/auth.guard';
 
@@ -17,6 +18,18 @@ export const routes: Routes = [
 
   // Backoffice: solo admin
   { path: 'users', component: UsersList, canActivate: [authGuard, adminGuard], title: 'Usuarios' },
+  {
+    path: 'users/new',
+    component: UserForm,
+    canActivate: [authGuard, adminGuard],
+    title: 'Nuevo usuario',
+  },
+  {
+    path: 'users/:id/edit',
+    component: UserForm,
+    canActivate: [authGuard, adminGuard],
+    title: 'Editar usuario',
+  },
 
   // Cualquier otra URL vuelve a la página de inicio (o al login, si no hay sesión)
   { path: '**', redirectTo: '' },

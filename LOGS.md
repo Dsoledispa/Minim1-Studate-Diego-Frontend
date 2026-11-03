@@ -30,6 +30,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 - **Usuario**: `{ _id, name, email, role, birthDate?, degree?, lookingFor?, bio?, photo?, active, deleted, deletedAt?, createdAt, updatedAt }`, nunca con
   contraseña. `photo` es una imagen PNG o JPG en base64 (`data:image/...;base64,...`, 200 000 caracteres como mucho).
 - **Usuarios inactivos y archivados**: no pueden iniciar sesión ni renovar el token (401 con el mensaje de siempre). Lo hace el prehook del modelo.
+  Si ya tenían sesión, cualquier petición con su token responde 401 `{ message: 'Tu cuenta no está activa' }` y el frontend cierra la sesión.
 - **Gestión de usuarios** (solo `admin`):
   - `GET /users?page=&limit=&search=&role=&active=&degree=&archived=` responde `{ users, total, page, pages }`, ordenados por nombre. `search` busca en
     nombre y email; `role` es `user` o `admin`; `active` es `true` o `false`; `degree` es una titulación entera; `archived=true` lista solo los
@@ -56,7 +57,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 #### Backoffice (`backoffice`)
 
 - [x] Lista de usuarios paginada con búsqueda y filtros · Miguel Ángel
-- [ ] Formulario de usuario: crear, editar, rol y activo · Miguel Ángel
+- [x] Formulario de usuario: crear, editar, rol y activo · Miguel Ángel
 - [ ] Archivar, restaurar y eliminar desde el backoffice · Miguel Ángel
 - [ ] Acceso solo para admin (login y guards) · Miguel Ángel
 - [ ] Tests del frontend (dentro de cada rama) · Miguel Ángel
@@ -129,3 +130,27 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   API y el seed: como admin, 12 usuarios en 2 páginas, los inactivos en gris, y "Ver archivados" enseña a Sara y Dani.
 - Prompt de IA usado: «Empezamos por la lista de usuarios paginada con búsqueda y filtros. Primero quiero ver cómo está montada la
   paginación en el backend [...] quiero 10 usuarios por página y algunos filtros, los más típicos. ¿Qué filtros me sugieres?»
+
+### 2026-11-03 · Formulario de usuario: crear, editar, rol y activo
+
+- Pantallas `/users/new` y `/users/:id/edit` (`components/user-form`), solo para admin, con la forma del formulario de autores del
+  seminario: formulario reactivo con validadores, `removeEmpty` antes de enviar, modo crear o editar según haya `:id` y los errores de la
+  API con `apiErrorMessage`.
+- Es como el registro, pero el admin elige el rol, si el usuario está activo y el perfil (titulación de la lista `DEGREES`, qué busco, bio
+  con contador de 500, fecha de nacimiento y foto). La contraseña y su repetición (validador `passwordMatch`) solo se piden al crear;
+  desde el backoffice no se cambia la contraseña de nadie.
+- Foto de perfil: se elige un PNG o JPG y `utils/image-to-data-url.ts` lo recorta en un cuadrado de 256 x 256 en un `<canvas>` y lo pasa a
+  JPG en base64. Una foto del móvil de varios MB se queda en pocos KB (la de la prueba, 3747 caracteres). Se enseña ya recortada en el
+  círculo de `app-avatar` antes de guardar, y "Quitar foto" envía `photo: ''`.
+- Si el admin se edita a sí mismo, el rol y el activo salen deshabilitados con un aviso; además no se envían (la API respondería 403).
+- La lista tiene ahora "Nuevo usuario" y un botón "Editar" en cada fila (no en los archivados: hay que restaurarlos antes).
+- Problema encontrado: un usuario desactivado seguía pudiendo usar la API con su token hasta que caducaba. Se arregla en el backend
+  (`VerifyToken` comprueba que la cuenta sigue activa y responde 401); aquí no hay que tocar nada, porque el interceptor ya cierra la
+  sesión con ese 401.
+- Tests nuevos en `user-form.spec.ts`: al crear pide contraseña y que coincida, al crear envía el rol y el activo, al editar no pide
+  contraseña y hace un PUT sin ella, con el propio usuario el rol y el activo están bloqueados, y quitar la foto envía `photo: ''`.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (10 ficheros, 39 tests). En el navegador: se crea
+  "Paula Ruiz" con titulación, qué busco y una foto PNG; la foto se ve recortada antes de guardar, el usuario sale en la lista y en MongoDB
+  la foto está guardada como JPG en base64.
+- Prompt de IA usado: «Ahora el formulario de usuario: crear, editar, rol y activo. Es básicamente el register que ya tenemos, pero hecho
+  bien y adaptado a los roles. Lo de activo es importante [...] Dame el plan de acción.»
