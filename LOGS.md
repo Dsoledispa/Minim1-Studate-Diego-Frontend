@@ -53,7 +53,7 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
   - `GET /grades?page=&limit=&value=&user=` responde `{ grades, total, page, pages }`, primero los más nuevos. `user` deja los votos en los que
     ese usuario vota o es votado. 400 si un filtro no es válido.
   - `GET /grades/:gradeId` responde `{ grade }`; 404 si no existe.
-  - `POST /grades` con `{ from, to, value }` responde 201 `{ grade }`; 409 si la pareja ya tiene voto; 422 si `from` y `to` son el mismo usuario
+  - `POST /grades` con `{ from, to, value }` responde 201 `{ grade }`; 409 si la pareja ya tiene voto (`{ message: 'Este usuario ya ha votado ese perfil' }`); 422 si `from` y `to` son el mismo usuario
     (`{ message: 'Un usuario no se puede votar a sí mismo' }`) o el cuerpo no vale; 404 si `from` o `to` no existen.
   - `PUT /grades/:gradeId` con `{ value }` responde 200 `{ grade }`. `DELETE /grades/:gradeId` responde 204 (borrado físico).
   - Si al crear un A+ o al cambiar un voto a A+ ya existe el A+ contrario, se abre un Date entre los dos (si no lo había ya).
@@ -273,3 +273,14 @@ La bitácora del Seminario 7, de donde viene este código, se conserva en el tag
   los 5 Dates con las dos personas, "caducado" en el cerrado y el filtro por usuario; y con 390 px de ancho, tarjetas.
 - Prompt de IA usado: «Las pantallas de Dates, igual que las de La Orla: primero el mockup para verlo, y responsive desde el principio para que se
   vea en el móvil.»
+
+### 2026-11-03 · README final y contrato al día
+
+- Repaso final del README contra el código: la introducción explica las dos zonas de la app (Dates para todos y el backoffice solo para el
+  admin), y los scripts dicen cuántos tests hay. Las pantallas, la estructura del proyecto y la autenticación ya se habían ido poniendo al día
+  al cerrar cada rama; se comprueba que coinciden con `app.routes.ts` y con `src/app/`.
+- Contrato copiado otra vez del backend: el 409 de un voto repetido ahora trae el mensaje "Este usuario ya ha votado ese perfil" (antes
+  "from ya existe"), que es el que enseña el formulario de nuevo voto.
+- Validación ejecutada: `npm run build`, `npm run lint` y `npm test -- --watch=false` en verde (16 ficheros, 60 tests); con la API, el formulario de
+  nuevo voto con una pareja repetida enseña el mensaje nuevo.
+- Prompt de IA usado: el README va "al final de cada rama, como continuación"; esta es la del cierre del sprint.
