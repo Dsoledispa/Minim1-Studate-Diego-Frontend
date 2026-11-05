@@ -59,3 +59,10 @@ Prompts del examen del Mínimo 1. Las mismas entradas están también al final d
 - **Prompt:** «Tienes mi visto bueno del resultado final, procede.» (validación del mockup; Claude cierra F1 y propone el plan de F2)
 - **Incoherencias:** al editar, las tiradas llegan de la API con su `_id`, pero el esquema Joi de la tirada no lo acepta (422). Antes de enviarlas hay que quitarlo.
 - **Solución:** `models/plan.model.ts` con los tipos del Plan tal como llega con el populate y el tipo `SpinInput` (la tirada sin `_id`). `services/plan.service.ts` con las 7 llamadas: listado con `search`, `status`, `date` y `archived`, detalle, crear, editar, archivar, restaurar y eliminar. Lleva su spec de Vitest.
+
+## 9. F3: lista de Planes en la vista de Dates (`feat/plan-list`)
+
+- **Pregunta:** cómo integrar un componente standalone con la lista paginada de Planes en la vista de Dates, solo para el admin.
+- **Prompt:** «procede» (aprobación de F2; Claude cierra F2 y propone el plan de F3)
+- **Incoherencias:** en el mockup, el botón "Plan" de un Date con el Plan archivado saltaba solo a "Archivados". Con datos reales, la API filtra siempre por `archived` y no se sabe de antemano si ese Date tiene el Plan archivado. Además, el spec de `DatesList` del admin fallaría con la petición nueva a `/plans` si no se actualiza.
+- **Solución:** `components/plans-list` (standalone) con el buscador, el estado y Activos/Archivados combinados en `GET /plans`, paginación de servidor, populate de la pareja, y archivar, restaurar y eliminar con `confirm-modal`. `DatesList` lo muestra solo si `isAdmin()` y su botón "Plan" le pasa el Date con un `input()`. Si ese Date no tiene un Plan activo, la lista lo dice y avisa de que puede estar en "Archivados".

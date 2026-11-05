@@ -1,0 +1,114 @@
+/* La sección va debajo de la tabla de Dates, separada */
+:host {
+  display: block;
+  margin-top: 2.5rem;
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.subtitle {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* Los filtros, juntos a la izquierda (como en la barra de los Dates) */
+.toolbar {
+  justify-content: flex-start;
+}
+
+.count {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* Activos / Archivados: dos botones pegados, el activo relleno */
+.segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+}
+
+.segmented button {
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--primary);
+}
+
+.segmented button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* El filtro por Date que pone el botón "Plan" de la tabla de Dates; la x lo quita */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.4rem 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.chip button {
+  padding: 0 0.45rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.chip button:hover:not(:disabled) {
+  background: #d9dbf7;
+}
+
+.couple {
+  display: grid;
+  gap: 0.4rem;
+}
+
+/* Las tiradas de un Plan, una por línea; la aceptada lleva una marca verde delante */
+.spins {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spins li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+}
+
+.place {
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.spins li.accepted .place::before {
+  content: '\2713  ';
+  color: var(--ok);
+}
+
+@media (max-width: 680px) {
+  .toolbar select {
+    width: 100%;
+  }
+}

@@ -26,6 +26,7 @@ describe('DatesList', () => {
   let fixture: ComponentFixture<DatesList>;
   let httpMock: HttpTestingController;
   const datesUrl = `${environment.apiUrl}/dates`;
+  const plansUrl = `${environment.apiUrl}/plans`;
 
   // Prepara la pantalla con una sesión del rol que se pida
   async function setup(role: UserRole): Promise<void> {
@@ -47,6 +48,8 @@ describe('DatesList', () => {
     httpMock.expectOne(`${datesUrl}?page=1&limit=10&status=pending`).flush({ dates: [date], total: 1, page: 1, pages: 1 });
     if (role === 'admin') {
       httpMock.expectOne((request) => request.url === `${environment.apiUrl}/users`).flush({ users: [], total: 0, page: 1, pages: 0 });
+      // El admin ve además la lista de Planes, que pide su primera página
+      httpMock.expectOne(`${plansUrl}?page=1&limit=10`).flush({ plans: [], total: 0, page: 1, pages: 0 });
     }
     await fixture.whenStable();
     fixture.detectChanges();
@@ -62,6 +65,8 @@ describe('DatesList', () => {
     expect(component.firstTurnName(date)).toBe('Oriol');
     expect(row?.textContent).not.toContain('Eliminar');
     expect(component.isAdmin()).toBe(false);
+    // Los Planes son del backoffice: un user no ve la lista ni la pide (verify lo comprueba)
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-plans-list')).toBeNull();
   });
 
   it('shows the admin both users and the delete button', async () => {
@@ -71,6 +76,18 @@ describe('DatesList', () => {
     expect(row?.textContent).toContain('Usuario');
     expect(row?.textContent).toContain('Oriol Costa');
     expect(row?.textContent).toContain('Eliminar');
+    expect(row?.textContent).toContain('Plan');
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-plans-list')).not.toBeNull();
+  });
+
+  it('shows the plan of a Date in the plans list when the admin presses "Plan"', async () => {
+    await setup('admin');
+    component.showPlan(date);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`${plansUrl}?page=1&limit=10&date=d1`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Date: Usuario y Oriol Costa');
   });
 
   it('changes tab and asks for that status from the first page', async () => {

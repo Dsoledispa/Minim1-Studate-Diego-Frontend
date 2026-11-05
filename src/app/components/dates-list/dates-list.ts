@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -14,6 +14,7 @@ import { apiErrorMessage } from '../../utils/api-error';
 import { Avatar } from '../avatar/avatar';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { Pagination } from '../pagination/pagination';
+import { PlanDateFilter, PlansList } from '../plans-list/plans-list';
 
 const PAGE_SIZE = 10;
 
@@ -29,7 +30,7 @@ const TABS: { status: DateFilters['status']; label: string }[] = [
 // filtrar por usuario y eliminar); un usuario normal ve solo los suyos. Quién ve qué lo decide la API
 @Component({
   selector: 'app-dates-list',
-  imports: [FormsModule, RouterLink, DatePipe, Avatar, ConfirmModal, Pagination],
+  imports: [FormsModule, RouterLink, DatePipe, Avatar, ConfirmModal, Pagination, PlansList],
   templateUrl: './dates-list.html',
   styleUrl: './dates-list.css',
 })
@@ -61,6 +62,12 @@ export class DatesList implements OnInit {
   users = signal<User[]>([]);
 
   dateToDelete = signal<StudateDate | null>(null);
+
+  // El Date por el que se filtra la lista de Planes (solo admin). null = todos los Planes
+  planDate = signal<PlanDateFilter | null>(null);
+
+  // La sección de Planes, para bajar hasta ella al pulsar "Plan"
+  private plansSection = viewChild(PlansList, { read: ElementRef });
 
   deleteMessage = computed(() => {
     const date = this.dateToDelete();
@@ -132,6 +139,12 @@ export class DatesList implements OnInit {
 
   extend(date: StudateDate): void {
     this.run(this.dateService.extendDate(date._id));
+  }
+
+  // Botón "Plan" de una fila (solo admin): la lista de Planes pasa a enseñar el Plan de ese Date
+  showPlan(date: StudateDate): void {
+    this.planDate.set({ id: date._id, name: date.users.map((user) => user.name).join(' y ') });
+    this.plansSection()?.nativeElement.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }
 
   askDelete(date: StudateDate): void {
