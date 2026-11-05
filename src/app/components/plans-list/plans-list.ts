@@ -27,6 +27,7 @@ import { apiErrorMessage } from '../../utils/api-error';
 import { Avatar } from '../avatar/avatar';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { Pagination } from '../pagination/pagination';
+import { PlanForm } from '../plan-form/plan-form';
 
 // 10 Planes por página: se los pedimos así a la API (?limit=10)
 export const PLAN_PAGE_SIZE = 10;
@@ -45,7 +46,7 @@ type PlanAction = 'archive' | 'delete';
 // La paginación, la búsqueda y los filtros los hace la API: cada cambio pide la página que toca
 @Component({
   selector: 'app-plans-list',
-  imports: [FormsModule, DatePipe, Avatar, ConfirmModal, Pagination],
+  imports: [FormsModule, DatePipe, Avatar, ConfirmModal, Pagination, PlanForm],
   templateUrl: './plans-list.html',
   styleUrl: './plans-list.css',
 })
@@ -73,6 +74,9 @@ export class PlansList {
   search = signal('');
   status = signal<PlanFilters['status']>('');
   archived = signal(false);
+
+  // El formulario abierto: planId null = crear un Plan; null del todo = cerrado
+  form = signal<{ planId: string | null } | null>(null);
 
   // El Plan y la acción que espera confirmación en el modal (null si el modal está cerrado)
   pending = signal<{ plan: Plan; action: PlanAction } | null>(null);
@@ -151,6 +155,25 @@ export class PlansList {
     this.loadPage(1);
   }
 
+  openNew(): void {
+    this.form.set({ planId: null });
+  }
+
+  // Editar (activos) o ver en solo lectura (archivados): el formulario pide el detalle a la API
+  openPlan(plan: Plan): void {
+    this.form.set({ planId: plan._id });
+  }
+
+  closeForm(): void {
+    this.form.set(null);
+  }
+
+  // Al guardar se cierra el formulario y se recarga la página, para ver el Plan con sus cambios
+  onSaved(): void {
+    this.form.set(null);
+    this.loadPage(this.page());
+  }
+
   coupleName(plan: Plan): string {
     return plan.date.users.map((user) => user.name).join(' y ');
   }
@@ -174,6 +197,8 @@ export class PlansList {
     }
 
     this.pending.set(null);
+    // El Plan cambia de lista: si estaba abierto en el formulario, se cierra
+    this.form.set(null);
     const request =
       pending.action === 'delete'
         ? this.planService.deletePlan(pending.plan._id)
@@ -183,6 +208,7 @@ export class PlansList {
 
   // Restaurar no pide confirmación: no se pierde nada y se puede volver a archivar
   restore(plan: Plan): void {
+    this.form.set(null);
     this.run(this.planService.restorePlan(plan._id));
   }
 
