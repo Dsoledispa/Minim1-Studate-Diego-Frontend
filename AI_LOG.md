@@ -115,3 +115,10 @@ Herramienta: Claude Code (Anthropic). Modelo: Claude Opus 5.5.
 - **Prompt:** «procede» (aprobación de F2; Claude cierra F2 y propone el plan de F3)
 - **Incoherencias:** en el mockup, el botón "Plan" de un Date con el Plan archivado saltaba solo a "Archivados". Con datos reales, la API filtra siempre por `archived` y no se sabe de antemano si ese Date tiene el Plan archivado. Además, el spec de `DatesList` del admin fallaría con la petición nueva a `/plans` si no se actualiza.
 - **Solución:** `components/plans-list` (standalone) con el buscador, el estado y Activos/Archivados combinados en `GET /plans`, paginación de servidor, populate de la pareja, y archivar, restaurar y eliminar con `confirm-modal`. `DatesList` lo muestra solo si `isAdmin()` y su botón "Plan" le pasa el Date con un `input()`. Si ese Date no tiene un Plan activo, la lista lo dice y avisa de que puede estar en "Archivados".
+
+### 10. F4: formulario y detalle de un Plan (`feat/plan-form`)
+
+- **Pregunta:** cómo crear, editar y ver un Plan con un componente standalone de formulario y detalle, con las tiradas como lista dinámica.
+- **Prompt:** «procede» (aprobación de F3; Claude implementa F3, la prueba contra la API real y propone el plan de F4)
+- **Incoherencias:** en la prueba real de F3, la barra de filtros heredaba el `justify-content: space-between` global y separaba los controles (lo corregimos). Para F4: el `<input type="datetime-local">` trabaja en hora local sin zona y la API guarda ISO en UTC, así que hay que convertir en los dos sentidos. Además, al editar las tiradas llegan con `_id` y Joi no lo acepta.
+- **Solución:** `components/plan-form` (standalone) con formulario reactivo: `FormArray` de tiradas (de 1 a 3) y un validador de grupo con las mismas reglas que Joi (una sola aceptada; confirmado con aceptada). Pide el detalle con `GET /plans/:id`, crea con `POST` y edita con `PUT` enviando `SpinInput` sin `_id`. Un Plan archivado se ve en solo lectura. `plans-list` lo abre con "Nuevo Plan", "Editar" y "Ver", y recarga la página al guardar.
