@@ -3,6 +3,7 @@
     <h2>{{ archived() ? 'Planes archivados' : 'Planes' }}</h2>
     <p class="subtitle">Cambio de Aula: los sitios que la ruleta propone a cada Date</p>
   </div>
+  <button type="button" (click)="openNew()">Nuevo Plan</button>
 </div>
 
 <!-- Los filtros se combinan en la misma petición: GET /plans?search=...&status=...&date=...&archived=... -->
@@ -100,9 +101,11 @@
             </td>
             <td class="actions">
               @if (plan.deleted) {
+                <button type="button" class="secondary" (click)="openPlan(plan)">Ver</button>
                 <button type="button" class="secondary" (click)="restore(plan)">Restaurar</button>
                 <button type="button" class="danger" (click)="askDelete(plan)">Eliminar</button>
               } @else {
+                <button type="button" class="secondary" (click)="openPlan(plan)">Editar</button>
                 <button type="button" class="danger" (click)="askArchive(plan)">Archivar</button>
               }
             </td>
@@ -117,6 +120,16 @@
   </div>
 
   <app-pagination [page]="page()" [totalPages]="totalPages()" (pageChange)="loadPage($event)" />
+}
+
+<!-- El formulario y detalle, debajo de la lista: crear (planId null), editar o ver un archivado -->
+@if (form(); as open) {
+  <app-plan-form
+    [planId]="open.planId"
+    [dateId]="date()?.id ?? ''"
+    (saved)="onSaved()"
+    (closed)="closeForm()"
+  />
 }
 
 <!-- El mismo modal para archivar y para eliminar para siempre -->

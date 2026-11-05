@@ -141,6 +141,37 @@ describe('PlansList', () => {
     expect(component.error()).toBe('Archiva el Plan antes de eliminarlo');
   });
 
+  it('opens the form to create a plan and to edit one', () => {
+    component.openNew();
+    fixture.detectChanges();
+    // El formulario de crear pide los Dates que se pueden elegir
+    httpMock
+      .expectOne(`${environment.apiUrl}/dates?page=1&limit=100`)
+      .flush({ dates: [], total: 0, page: 1, pages: 0 });
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-plan-form')).not.toBeNull();
+    expect(text()).toContain('Nuevo Plan');
+
+    component.openPlan(plan);
+    fixture.detectChanges();
+    // El de editar pide el detalle del Plan
+    httpMock.expectOne(`${plansUrl}/p1`).flush({ plan });
+    fixture.detectChanges();
+    expect(text()).toContain('Editar Plan');
+  });
+
+  it('closes the form and reloads the page after saving', () => {
+    component.openPlan(plan);
+    fixture.detectChanges();
+    httpMock.expectOne(`${plansUrl}/p1`).flush({ plan });
+
+    component.onSaved();
+    fixture.detectChanges();
+
+    httpMock.expectOne(`${plansUrl}?page=1&limit=10`).flush(page([plan]));
+    expect(component.form()).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-plan-form')).toBeNull();
+  });
+
   it('asks the API for the next page', () => {
     component.loadPage(2);
 

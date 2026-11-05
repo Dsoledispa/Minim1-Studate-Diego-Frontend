@@ -1,0 +1,91 @@
+/* El panel del formulario, debajo de la lista de Planes */
+:host {
+  display: block;
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+/* El form global es estrecho y con borde; aquí ocupa todo el panel */
+form {
+  max-width: none;
+  padding: 0;
+  border: 0;
+}
+
+.detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--head);
+  font-size: 0.88rem;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+fieldset {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+legend {
+  padding: 0 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+/* Cada tirada en una fila: sitio, minutos, día y hora, aceptada y quitar */
+.spin-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) 110px minmax(180px, 1.3fr) auto auto;
+  align-items: end;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--border);
+}
+
+.spin-row:last-of-type {
+  border-bottom: 0;
+}
+
+.spin-row .checkbox {
+  padding-bottom: 0.5rem;
+  white-space: nowrap;
+}
+
+.num {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 680px) {
+  .spin-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .spin-row label:first-of-type {
+    grid-column: 1 / -1;
+  }
+}
