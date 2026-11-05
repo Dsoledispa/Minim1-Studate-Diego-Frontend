@@ -52,3 +52,10 @@ Prompts del examen del Mínimo 1. Las mismas entradas están también al final d
 - **Prompt:** «Seed reseteado. Vale, pues entonces móntame ya el mockup de la página que vamos a modificar, así te valido si me parece bien el resultado final.»
 - **Incoherencias:** para enseñar en la tabla de Dates qué Date tiene Plan habría que pedir los Planes de cada fila, una petición por Date.
 - **Solución:** `mockups/plan-dates.html`, un HTML estático con los estilos y los datos reales del seed. El botón "Plan" de cada Date filtra la lista de Planes por ese Date (`GET /plans?date=`), así que basta con una sola llamada. Los Planes salen en una sección nueva debajo de los Dates (`app-plans-list`), y el formulario y detalle (`app-plan-form`) se abre como panel en la misma vista. Todo solo para el admin.
+
+## 8. F2: modelo y PlanService del frontend (`feat/plan-service`)
+
+- **Pregunta:** cómo concentrar en un solo servicio todas las peticiones a `/plans`.
+- **Prompt:** «Tienes mi visto bueno del resultado final, procede.» (validación del mockup; Claude cierra F1 y propone el plan de F2)
+- **Incoherencias:** al editar, las tiradas llegan de la API con su `_id`, pero el esquema Joi de la tirada no lo acepta (422). Antes de enviarlas hay que quitarlo.
+- **Solución:** `models/plan.model.ts` con los tipos del Plan tal como llega con el populate y el tipo `SpinInput` (la tirada sin `_id`). `services/plan.service.ts` con las 7 llamadas: listado con `search`, `status`, `date` y `archived`, detalle, crear, editar, archivar, restaurar y eliminar. Lleva su spec de Vitest.
