@@ -1,12 +1,19 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Observable, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
 
-import { DATE_STATUS_LABELS, DateFilters, DateStatus, GradeUser, StudateDate, User } from '../../models';
+import {
+  DATE_STATUS_LABELS,
+  DateFilters,
+  DateStatus,
+  GradeUser,
+  StudateDate,
+  User,
+} from '../../models';
 import { AuthService } from '../../services/auth.service';
 import { DateService } from '../../services/date.service';
 import { UserService } from '../../services/user.service';
@@ -14,6 +21,7 @@ import { apiErrorMessage } from '../../utils/api-error';
 import { Avatar } from '../avatar/avatar';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { Pagination } from '../pagination/pagination';
+import { PlanDateFilter, PlansList } from '../plans-list/plans-list';
 
 const PAGE_SIZE = 10;
 
@@ -29,7 +37,7 @@ const TABS: { status: DateFilters['status']; label: string }[] = [
 // filtrar por usuario y eliminar); un usuario normal ve solo los suyos. Quién ve qué lo decide la API
 @Component({
   selector: 'app-dates-list',
-  imports: [FormsModule, RouterLink, DatePipe, Avatar, ConfirmModal, Pagination],
+  imports: [FormsModule, RouterLink, DatePipe, Avatar, ConfirmModal, Pagination, PlansList],
   templateUrl: './dates-list.html',
   styleUrl: './dates-list.css',
 })
@@ -62,6 +70,15 @@ export class DatesList implements OnInit {
 
   dateToDelete = signal<StudateDate | null>(null);
 
+  // El Date por el que se filtra la lista de Planes (solo admin). null = todos los Planes
+  planDate = signal<PlanDateFilter | null>(null);
+
+  // La sección de Planes, para bajar hasta ella al pulsar "Plan"
+  private plansSection = viewChild(PlansList, { read: ElementRef });
+
+  // La lista de Planes, para recargarla cuando se elimina un Date (la API borra su Plan en cascada)
+  private plansList = viewChild(PlansList);
+
   deleteMessage = computed(() => {
     const date = this.dateToDelete();
     return date ? `Se borra el Date entre ${date.users.map((user) => user.name).join(' y ')}.` : '';
@@ -73,19 +90,21 @@ export class DatesList implements OnInit {
         switchMap((page) => {
           this.loading.set(true);
           this.error.set('');
-          return this.dateService.getDates(page, PAGE_SIZE, { status: this.status(), user: this.user() }).pipe(
-            tap((response) => {
-              this.dates.set(response.dates);
-              this.total.set(response.total);
-              this.totalPages.set(Math.max(response.pages, 1));
-              this.page.set(response.page);
-            }),
-            catchError((err: HttpErrorResponse) => {
-              this.error.set(apiErrorMessage(err));
-              return EMPTY;
-            }),
-            finalize(() => this.loading.set(false)),
-          );
+          return this.dateService
+            .getDates(page, PAGE_SIZE, { status: this.status(), user: this.user() })
+            .pipe(
+              tap((response) => {
+                this.dates.set(response.dates);
+                this.total.set(response.total);
+                this.totalPages.set(Math.max(response.pages, 1));
+                this.page.set(response.page);
+              }),
+              catchError((err: HttpErrorResponse) => {
+                this.error.set(apiErrorMessage(err));
+                return EMPTY;
+              }),
+              finalize(() => this.loading.set(false)),
+            );
         }),
         takeUntilDestroyed(),
       )
@@ -134,6 +153,12 @@ export class DatesList implements OnInit {
     this.run(this.dateService.extendDate(date._id));
   }
 
+  // Botón "Plan" de una fila (solo admin): la lista de Planes pasa a enseñar el Plan de ese Date
+  showPlan(date: StudateDate): void {
+    this.planDate.set({ id: date._id, name: date.users.map((user) => user.name).join(' y ') });
+    this.plansSection()?.nativeElement.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }
+
   askDelete(date: StudateDate): void {
     this.dateToDelete.set(date);
   }
@@ -149,16 +174,28 @@ export class DatesList implements OnInit {
     }
 
     this.dateToDelete.set(null);
-    this.run(this.dateService.deleteDate(date._id));
+    this.run(this.dateService.deleteDate(date._id), () => this.afterDateDeleted(date));
   }
 
-  // Después de cualquier cambio se recarga la página (un Date que cambia de bandeja sale de la pestaña)
-  private run(request: Observable<unknown>): void {
+  // Si la lista de Planes estaba filtrada por ese Date, se quita el filtro (eso ya la recarga);
+  // si no, se recarga igualmente para que su Plan desaparezca
+  private afterDateDeleted(date: StudateDate): void {
+    if (this.planDate()?.id === date._id) {
+      this.planDate.set(null);
+    } else {
+      this.plansList()?.loadPage(1);
+    }
+  }
+
+  // Después de cualquier cambio se recarga la página (un Date que cambia de bandeja sale de la pestaña).
+  // done: lo que hay que hacer además cuando la petición va bien
+  private run(request: Observable<unknown>, done?: () => void): void {
     this.error.set('');
     request.subscribe({
       next: () => {
         const isLastOnPage = this.dates().length === 1 && this.page() > 1;
         this.loadPage(isLastOnPage ? this.page() - 1 : this.page());
+        done?.();
       },
       // Con un 409 la API dice que la prórroga ya se ha usado
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),

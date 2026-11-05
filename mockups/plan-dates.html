@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup F1 - Dates con Planes (backoffice)</title>
+<!--
+  Mockup de la feat F1 (Minimo 1). Es un HTML estatico: no llama a la API.
+  Copia los estilos de src/styles.css y de los componentes que ya existen (navbar, dates-list,
+  pagination, avatar y confirm-modal) para que se vea como la app de verdad, con los datos del seed.
+
+  Lo nuevo esta marcado con un borde discontinuo y el nombre del componente:
+    app-plans-list  lista paginada de Planes con buscador y filtros (componente standalone nuevo)
+    app-plan-form   formulario y detalle de un Plan (componente standalone nuevo)
+  Los dos van dentro de la vista de Dates (/dates), solo para el admin.
+-->
+<style>
+  /* ---- Estilos de la app (src/styles.css) ---- */
+  :root {
+    --primary: #3b3fb6; --primary-dark: #2a2d8f; --primary-light: #ecedfb; --accent: #e8615a;
+    --navbar: #24265f; --danger: #c62828; --danger-light: #fdecea; --text: #1d2036; --muted: #666b82;
+    --border: #dcdeea; --background: #f5f5fa; --surface: #ffffff; --radius: 8px; --head: #eef0f7;
+    --ok: #1f7a4d; --ok-light: #e3f4ea; --warn: #9a5b00; --warn-light: #fdf1dc;
+    color: var(--text);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--background); }
+  h1 { margin: 0 0 1rem; font-size: 1.6rem; }
+  a { color: var(--primary); }
+  button, .button {
+    display: inline-block; padding: 0.45rem 0.9rem; border: 1px solid var(--primary); border-radius: var(--radius);
+    background: var(--primary); color: #fff; font: inherit; font-size: 0.9rem; text-decoration: none; cursor: pointer;
+  }
+  button:hover:not(:disabled), .button:hover { background: var(--primary-dark); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary { background: var(--surface); color: var(--primary); }
+  button.secondary:hover:not(:disabled) { background: var(--primary-light); }
+  button.danger { border-color: var(--danger); background: var(--surface); color: var(--danger); }
+  button.danger:hover:not(:disabled) { background: var(--danger-light); }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #9ea2f0; outline-offset: 2px; }
+  .page-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+  .page-header h1 { margin: 0; }
+  table { width: 100%; border: 1px solid var(--border); border-collapse: collapse; background: var(--surface); }
+  th, td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.92rem; text-align: left; vertical-align: top; }
+  th { background: var(--head); font-size: 0.85rem; font-weight: 600; }
+  td.actions { text-align: right; white-space: nowrap; }
+  td.actions button + button { margin-left: 0.4rem; }
+  td.empty, .muted { color: var(--muted); }
+  input, select { padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit; }
+  .search { width: 100%; max-width: 360px; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  label { display: grid; gap: 0.3rem; font-size: 0.92rem; font-weight: 500; }
+  .hint { color: var(--muted); font-size: 0.82rem; font-weight: normal; }
+  .field-error { color: var(--danger); font-size: 0.82rem; font-weight: normal; }
+  .alert { padding: 0.75rem 1rem; border: 1px solid #f5c2c0; border-radius: var(--radius); background: var(--danger-light); color: var(--danger); }
+  .pill { display: inline-block; padding: 0.12rem 0.55rem; border-radius: 999px; background: #eceef3; color: #4b4f66; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+  .pill.admin { background: var(--primary-light); color: var(--primary); }
+  .pill.ok { background: var(--ok-light); color: var(--ok); }
+  .pill.off { color: var(--muted); }
+  .pill.warn { background: var(--warn-light); color: var(--warn); }
+  .person { display: flex; align-items: center; gap: 0.6rem; }
+  .who { display: grid; line-height: 1.25; }
+  .who small { color: var(--muted); font-size: 0.8rem; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  .table-wrap table { border: 0; }
+
+  /* navbar */
+  .navbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem; min-height: 58px; padding: 0.5rem 1.5rem; background: var(--navbar); }
+  .brand { color: #fff; font-size: 1.3rem; font-weight: 700; text-decoration: none; }
+  .brand span { color: var(--accent); }
+  nav { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  nav a { padding: 0.4rem 0.8rem; border-radius: var(--radius); color: rgba(255, 255, 255, 0.75); text-decoration: none; }
+  nav a.active { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 -2px 0 var(--accent); color: #fff; }
+  .zone { color: #a9abd6; font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  .session { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+  .user { color: #fff; font-size: 0.88rem; }
+  main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+  /* dates-list */
+  .tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+  .tabs button { border: 0; border-radius: var(--radius) var(--radius) 0 0; background: transparent; color: var(--muted); }
+  .tabs button:hover:not(:disabled) { background: var(--primary-light); color: var(--primary); }
+  .tabs button.active { box-shadow: inset 0 -3px 0 var(--primary); color: var(--primary); font-weight: 600; }
+  .couple { display: grid; gap: 0.4rem; }
+  .first { font-weight: 700; }
+
+  /* avatar, pagination y confirm-modal */
+  .avatar { display: inline-grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-size: 0.8rem; font-weight: 700; }
+  .avatar.xs { width: 28px; height: 28px; font-size: 0.7rem; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: 0.9rem; }
+  .overlay { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); }
+  .overlay.open { display: flex; }
+  .modal { width: 90%; max-width: 400px; padding: 24px; border-radius: 8px; background: #fff; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+  .modal h2 { margin-top: 0; }
+  .modal .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+
+  /* ---- Lo nuevo: app-plans-list y app-plan-form ---- */
+  .plans { margin-top: 2.5rem; }
+  .plans h2, .plan-form h2 { margin: 0; font-size: 1.3rem; }
+  .plans .subtitle { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.88rem; }
+  /* Activos / Archivados como un interruptor de dos botones */
+  .segmented { display: inline-flex; overflow: hidden; border: 1px solid var(--primary); border-radius: var(--radius); }
+  .segmented button { border: 0; border-radius: 0; background: var(--surface); color: var(--primary); }
+  .segmented button.active { background: var(--primary); color: #fff; }
+  /* El filtro por Date que pone el boton "Plan" de la tabla de arriba */
+  .chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.4rem 0.25rem 0.75rem; border-radius: 999px; background: var(--primary-light); color: var(--primary); font-size: 0.85rem; font-weight: 600; }
+  .chip button { padding: 0 0.45rem; border: 0; border-radius: 999px; background: transparent; color: var(--primary); font-size: 1rem; line-height: 1.4; }
+  .chip button:hover:not(:disabled) { background: #d9dbf7; }
+  /* Las tiradas dentro de la celda: una por linea */
+  .spins { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+  .spins li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.5rem; }
+  .spins .place { font-weight: 600; }
+  .spins .meta { color: var(--muted); font-size: 0.82rem; }
+  .spins li.accepted .place::before { content: '\2713  '; color: var(--ok); }
+
+  .plan-form { display: none; margin-top: 1.5rem; padding: 1.25rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  .plan-form.open { display: block; }
+  .plan-form .detail { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; margin: 1rem 0; padding: 0.75rem 1rem; border-radius: var(--radius); background: var(--head); font-size: 0.88rem; }
+  .plan-form .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+  fieldset { display: grid; gap: 0.75rem; margin: 1rem 0 0; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); }
+  legend { padding: 0 0.4rem; font-size: 0.92rem; font-weight: 600; }
+  .spin-row { display: grid; grid-template-columns: minmax(180px, 2fr) 110px minmax(180px, 1.3fr) auto auto; align-items: end; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px dashed var(--border); }
+  .spin-row:last-of-type { border-bottom: 0; }
+  .spin-row .check { display: flex; align-items: center; gap: 0.4rem; padding-bottom: 0.5rem; white-space: nowrap; }
+  .spin-row .num { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; grid-column: 1 / -1; }
+  .form-actions { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
+
+  /* ---- Solo del mockup: la barra de arriba y las marcas de lo nuevo ---- */
+  .mock-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; padding: 0.6rem 1.5rem; background: #fff7d6; border-bottom: 1px solid #ecd98a; font-size: 0.85rem; }
+  .mock-bar strong { margin-right: auto; }
+  .mock-bar label { display: flex; align-items: center; gap: 0.35rem; font-weight: 500; }
+  .notes .new { position: relative; outline: 2px dashed var(--accent); outline-offset: 6px; }
+  .notes .new::before { content: attr(data-component); position: absolute; top: -1.9rem; right: 0; padding: 0.1rem 0.5rem; border-radius: 4px; background: var(--accent); color: #fff; font: 600 0.72rem/1.6 ui-monospace, monospace; }
+  .api { display: none; margin: 0.5rem 0 0; color: #7a5a00; font: 0.78rem/1.4 ui-monospace, monospace; }
+  .notes .api { display: block; }
+  .notes .new-btn { outline: 2px dashed var(--accent); outline-offset: 2px; }
+  body.as-user .admin-only { display: none !important; }
+  body:not(.as-user) .user-only { display: none !important; }
+
+  /* Movil: las tablas "stack" se ven como tarjetas, igual que en la app */
+  @media (max-width: 680px) {
+    .navbar { padding: 0.6rem 1rem; }
+    .session { justify-content: space-between; width: 100%; margin-left: 0; }
+    .stack thead { display: none; }
+    .stack, .stack tbody, .stack tr, .stack td { display: block; width: 100%; }
+    .stack tr { padding: 0.75rem 0.9rem; border-bottom: 1px solid var(--border); }
+    .stack td { padding: 0.25rem 0; border: 0; }
+    .stack td[data-label]::before { content: attr(data-label); display: block; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .stack td.actions { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-top: 0.6rem; text-align: left; white-space: normal; }
+    .stack td.actions button + button { margin-left: 0; }
+    .toolbar select, .toolbar .search { width: 100%; max-width: none; }
+    .spin-row { grid-template-columns: 1fr 1fr; }
+    .spin-row label:first-of-type { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body class="notes">
+
+<div class="mock-bar">
+  <strong>Mockup F1 &middot; Vista /dates con los Planes (datos del seed)</strong>
+  <label><input type="radio" name="role" value="admin" checked /> Ver como admin</label>
+  <label><input type="radio" name="role" value="user" /> Ver como user</label>
+  <label><input type="checkbox" id="toggle-notes" checked /> Marcar lo nuevo y las llamadas a la API</label>
+</div>
+
+<header class="navbar">
+  <a class="brand" href="#">Stu<span>date</span></a>
+  <nav><a class="active" href="#">Dates</a></nav>
+  <span class="zone admin-only">Backoffice</span>
+  <nav class="admin-only"><a href="#">Usuarios</a><a href="#">La Orla</a></nav>
+  <div class="session">
+    <span class="user admin-only">Admin (admin)</span>
+    <span class="user user-only">Usuario (user)</span>
+    <button type="button" class="secondary">Cerrar sesión</button>
+  </div>
+</header>
+
+<main>
+  <!-- ================= Vista de Dates (ya existe) ================= -->
+  <div class="page-header">
+    <h1><span class="admin-only">Dates</span><span class="user-only">Mis Dates</span></h1>
+    <a class="button" href="#">Nuevo Date</a>
+  </div>
+
+  <div class="tabs" role="group" aria-label="Bandejas">
+    <button type="button">Pendientes</button>
+    <button type="button">En curso</button>
+    <button type="button">Cerrados</button>
+    <button type="button" class="active">Todos</button>
+  </div>
+
+  <div class="toolbar admin-only">
+    <select aria-label="Usuario"><option>Todos los usuarios</option></select>
+    <span class="muted hint">En negrita, a quien el sorteo le ha dado el primer mensaje.</span>
+  </div>
+
+  <p class="user-only muted">Un user ve sus Dates igual que ahora: ni el botón "Plan" ni la sección de Planes (solo admin).</p>
+
+  <div class="table-wrap">
+    <table class="stack">
+      <thead>
+        <tr><th>Pareja</th><th>Estado</th><th>Caduca</th><th>Prórroga</th><th></th></tr>
+      </thead>
+      <tbody id="dates-body"></tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button type="button" class="secondary" disabled>Anterior</button><span>Página 1 de 1</span><button type="button" class="secondary" disabled>Siguiente</button>
+  </div>
+
+  <!-- ================= NUEVO: app-plans-list ================= -->
+  <section class="plans new admin-only" id="plans" data-component="app-plans-list (nuevo)">
+    <div class="page-header">
+      <div>
+        <h2>Planes</h2>
+        <p class="subtitle">Cambio de Aula: los sitios que la ruleta propone a cada Date</p>
+      </div>
+      <button type="button" id="new-plan">Nuevo Plan</button>
+    </div>
+
+    <div class="toolbar">
+      <input class="search" id="search" type="search" placeholder="Buscar sitio (p. ej. cafetería)" aria-label="Buscar sitio" />
+      <select id="status" aria-label="Estado">
+        <option value="">Todos los estados</option>
+        <option value="proposing">Proponiendo</option>
+        <option value="confirmed">Confirmado</option>
+        <option value="cancelled">Cancelado</option>
+      </select>
+      <div class="segmented" role="group" aria-label="Archivados">
+        <button type="button" class="active" data-archived="false">Activos</button>
+        <button type="button" data-archived="true">Archivados</button>
+      </div>
+      <span class="chip" id="date-chip" hidden>Date: <span id="date-chip-name"></span><button type="button" id="clear-date" aria-label="Quitar el filtro por Date">&times;</button></span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="stack">
+        <thead>
+          <tr><th>Pareja</th><th>Estado</th><th>Tiradas de la ruleta</th><th>Date</th><th></th></tr>
+        </thead>
+        <tbody id="plans-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button type="button" class="secondary" disabled>Anterior</button><span>Página 1 de 1</span><button type="button" class="secondary" disabled>Siguiente</button>
+    </div>
+    <p class="api" id="api-list"></p>
+
+    <!-- ================= NUEVO: app-plan-form ================= -->
+    <div class="plan-form new" id="plan-form" data-component="app-plan-form (nuevo)">
+      <div class="page-header">
+        <h2 id="form-title">Editar Plan</h2>
+        <button type="button" class="secondary" id="close-form">Cerrar</button>
+      </div>
+
+      <div class="detail" id="form-detail"></div>
+
+      <p class="alert" id="form-error" hidden></p>
+
+      <div class="fields">
+        <label>
+          Date *
+          <select id="form-date"></select>
+          <span class="hint" id="form-date-hint"></span>
+        </label>
+        <label>
+          Estado *
+          <select id="form-status">
+            <option value="proposing">Proponiendo</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
+          <span class="field-error" id="status-error" hidden>Un Plan confirmado necesita una tirada aceptada</span>
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>Tiradas de la ruleta (<span id="spin-count"></span>/3)</legend>
+        <div id="spins"></div>
+        <div>
+          <button type="button" class="secondary" id="add-spin">+ Añadir tirada</button>
+          <span class="hint">&nbsp;Como mucho 3 tiradas y una sola aceptada (el sitio elegido).</span>
+        </div>
+      </fieldset>
+
+      <div class="form-actions">
+        <button type="button" id="save">Guardar</button>
+        <button type="button" class="secondary" id="cancel">Cancelar</button>
+        <button type="button" class="danger" id="demo-409">Probar un 409</button>
+      </div>
+      <p class="api" id="api-form"></p>
+    </div>
+  </section>
+</main>
+
+<!-- confirm-modal (ya existe): el mismo para archivar y para eliminar -->
+<div class="overlay" id="modal" role="presentation">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h2 id="modal-title"></h2>
+    <p id="modal-message"></p>
+    <div class="actions">
+      <button type="button" class="secondary" id="modal-cancel">Cancelar</button>
+      <button type="button" class="danger" id="modal-confirm"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Datos del seed (npm run seed -- --reset), con las horas en hora de Madrid
+  const COLORS = ['#3b3fb6', '#e8615a', '#1f7a4d', '#9a5b00', '#7a3bb6', '#0e7490', '#b6366f', '#4b5563'];
+  const DATE_STATUS = { pending: 'Pendiente', ongoing: 'En curso', closed: 'Cerrado' };
+  const PLAN_STATUS = { proposing: ['Proponiendo', 'warn'], confirmed: ['Confirmado', 'ok'], cancelled: ['Cancelado', 'off'] };
+  const people = {
+    laia: ['Laia Puig', 'laia@example.com'], pau: ['Pau Ferrer', 'pau@example.com'],
+    nerea: ['Nerea Gil', 'nerea@example.com'], marc: ['Marc Soler', 'marc@example.com'],
+    hugo: ['Hugo Martín', 'hugo@example.com'], julia: ['Júlia Serra', 'julia@example.com'],
+    user: ['Usuario', 'user@example.com'], oriol: ['Oriol Costa', 'oriol@example.com']
+  };
+  // Primero los mas nuevos, como GET /dates
+  const dates = [
+    { id: 'd4', users: ['user', 'oriol'], first: 'oriol', status: 'pending', expires: '06/11 16:42', extended: false },
+    { id: 'd3', users: ['hugo', 'julia'], first: 'julia', status: 'pending', expires: '06/11 16:42', extended: false },
+    { id: 'd2', users: ['nerea', 'marc'], first: 'marc', status: 'closed', expires: '05/11 14:42', expired: true, extended: false },
+    { id: 'd1', users: ['laia', 'pau'], first: 'pau', status: 'ongoing', expires: '06/11 22:42', extended: true }
+  ];
+  let plans = [
+    { id: 'p2', date: 'd3', status: 'proposing', deleted: false, created: '05/11 16:42', updated: '05/11 16:42', spins: [
+      { place: 'Bar de la plaça de Castelldefels', min: 20, at: '2026-11-07T20:00' },
+      { place: 'Platja de Castelldefels', min: 25, at: '2026-11-09T18:00' } ] },
+    { id: 'p1', date: 'd1', status: 'confirmed', deleted: false, created: '05/11 16:42', updated: '05/11 16:42', spins: [
+      { place: 'Cafetería de la EETAC', min: 1, at: '2026-11-06T11:00' },
+      { place: 'Biblioteca del Campus del Baix Llobregat', min: 4, at: '2026-11-07T17:00', accepted: true },
+      { place: 'Parc del Canal Olímpic', min: 15, at: '2026-11-08T19:00' } ] },
+    { id: 'p3', date: 'd4', status: 'cancelled', deleted: true, created: '05/11 16:42', updated: '05/11 16:42', spins: [
+      { place: 'Pizzeria del campus', min: 6, at: '2026-11-06T21:00' } ] }
+  ];
+
+  const state = { search: '', status: '', archived: false, date: '' };
+  let editing = null;
+  let pending = null;
+  const $ = (id) => document.getElementById(id);
+  const color = (name) => COLORS[[...name].reduce((t, l) => t + l.charCodeAt(0), 0) % COLORS.length];
+  const initials = (name) => name.split(' ').slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+  const avatar = (key, cls = '') => `<span class="avatar ${cls}" style="background:${color(people[key][0])}">${initials(people[key][0])}</span>`;
+  const pairName = (dateId) => dates.find((d) => d.id === dateId).users.map((u) => people[u][0]).join(' y ');
+  const day = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: '2-digit' }) + ' ' + iso.slice(11, 16);
+  };
+
+  // Tabla de Dates (ya existe). Lo unico nuevo es el boton "Plan" del admin
+  function renderDates() {
+    $('dates-body').innerHTML = dates.map((d) => `
+      <tr>
+        <td data-label="Pareja"><div class="couple">${d.users.map((u) => `
+          <div class="person">${avatar(u)}<span class="who"><span class="${u === d.first ? 'first' : ''}">${people[u][0]}</span><small>${people[u][1]}</small></span></div>`).join('')}
+        </div></td>
+        <td data-label="Estado"><select aria-label="Estado">${Object.entries(DATE_STATUS).map(([k, v]) => `<option ${k === d.status ? 'selected' : ''}>${v}</option>`).join('')}</select></td>
+        <td data-label="Caduca">${d.expires} ${d.expired ? '<span class="pill off">caducado</span>' : ''}</td>
+        <td data-label="Prórroga">${d.extended ? '<span class="pill admin">usada</span>' : '<span class="muted">disponible</span>'}</td>
+        <td class="actions">
+          <button type="button" class="secondary" ${d.extended ? 'disabled' : ''}>Prórroga +24 h</button>
+          <button type="button" class="secondary admin-only new-btn" data-plan-of="${d.id}" title="Ver el Plan de este Date">Plan</button>
+          <button type="button" class="danger admin-only">Eliminar</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // app-plans-list: en la app, cada cambio de filtro es una peticion GET /plans (paginacion de servidor).
+  // Aqui se simula filtrando en el navegador
+  function renderPlans() {
+    const term = state.search.trim().toLowerCase();
+    const rows = plans.filter((p) => p.deleted === state.archived
+      && (!state.status || p.status === state.status)
+      && (!state.date || p.date === state.date)
+      && (!term || p.spins.some((s) => s.place.toLowerCase().includes(term))));
+
+    $('plans-body').innerHTML = rows.map((p) => {
+      const d = dates.find((x) => x.id === p.date);
+      const [label, cls] = PLAN_STATUS[p.status];
+      return `
+      <tr>
+        <td data-label="Pareja"><div class="couple">${d.users.map((u) => `<div class="person">${avatar(u, 'xs')}<span class="who">${people[u][0]}</span></div>`).join('')}</div></td>
+        <td data-label="Estado"><span class="pill ${cls}">${label}</span>${p.deleted ? ' <span class="pill off">archivado</span>' : ''}</td>
+        <td data-label="Tiradas"><ul class="spins">${p.spins.map((s) => `
+          <li class="${s.accepted ? 'accepted' : ''}"><span class="place">${s.place}</span><span class="meta">${s.min} min a pie &middot; ${day(s.at)}</span>${s.accepted ? '<span class="pill ok">aceptada</span>' : ''}</li>`).join('')}
+        </ul></td>
+        <td data-label="Date"><span class="muted">${DATE_STATUS[d.status]}</span></td>
+        <td class="actions">${p.deleted
+          ? `<button type="button" class="secondary" data-view="${p.id}">Ver</button><button type="button" class="secondary" data-restore="${p.id}">Restaurar</button><button type="button" class="danger" data-delete="${p.id}">Eliminar</button>`
+          : `<button type="button" class="secondary" data-edit="${p.id}">Editar</button><button type="button" class="danger" data-archive="${p.id}">Archivar</button>`}
+        </td>
+      </tr>`;
+    }).join('') || `<tr><td class="empty" colspan="5">${state.date ? 'Este Date todavía no tiene Plan. Créalo con "Nuevo Plan".' : 'No hay Planes con estos filtros'}</td></tr>`;
+
+    const params = new URLSearchParams({ page: 1, limit: 10, search: state.search, ...(state.status && { status: state.status }), ...(state.date && { date: '<id del Date>' }), archived: state.archived });
+    $('api-list').textContent = 'GET /plans?' + decodeURIComponent(params.toString().replace(/\+/g, ' ')) + '   (paginación de servidor + búsqueda + filtros combinados)';
+    $('date-chip').hidden = !state.date;
+    if (state.date) $('date-chip-name').textContent = pairName(state.date);
+  }
+
+  // app-plan-form: el mismo componente para crear, editar y ver (archivado = solo lectura)
+  function openForm(plan, readOnly = false) {
+    editing = plan;
+    const form = $('plan-form');
+    form.classList.add('open');
+    $('form-error').hidden = true;
+    $('form-title').textContent = !plan ? 'Nuevo Plan' : readOnly ? 'Plan archivado' : 'Editar Plan';
+
+    const preset = plan ? plan.date : state.date;
+    const choices = plan ? dates : dates.filter((d) => d.status !== 'closed');
+    $('form-date').innerHTML = (plan ? '' : '<option value="">Elige un Date</option>')
+      + choices.map((d) => `<option value="${d.id}" ${d.id === preset ? 'selected' : ''}>${pairName(d.id)} (${DATE_STATUS[d.status]})</option>`).join('');
+    $('form-date').disabled = Boolean(plan);
+    $('form-date-hint').textContent = plan ? 'El Date de un Plan no se cambia.' : 'Solo Dates sin cerrar. Un Date tiene como mucho un Plan.';
+    $('form-status').value = plan ? plan.status : 'proposing';
+
+    if (plan) {
+      const d = dates.find((x) => x.id === plan.date);
+      $('form-detail').innerHTML = `<div class="person">${d.users.map((u) => avatar(u)).join('')}<span class="who"><strong>${pairName(plan.date)}</strong><small>Date ${DATE_STATUS[d.status].toLowerCase()} &middot; caduca ${d.expires}</small></span></div>
+        <span>Creado ${plan.created}</span><span>Actualizado ${plan.updated}</span>${plan.deleted ? '<span class="pill off">archivado</span>' : ''}`;
+    } else {
+      $('form-detail').innerHTML = '<span class="muted">El Plan empieza en "Proponiendo" con la primera tirada de la ruleta.</span>';
+    }
+
+    renderSpins(plan ? plan.spins.map((s) => ({ ...s })) : [{ place: '', min: '', at: '' }], readOnly);
+    form.querySelectorAll('input, select:not(#form-date)').forEach((el) => (el.disabled = readOnly));
+    $('demo-409').hidden = readOnly;
+    $('api-form').textContent = !plan ? 'POST /plans   (201; 404 si el Date no existe; 409 si está cerrado o ya tiene Plan; 422 si no pasa Joi)'
+      : readOnly ? 'GET /plans/:id   (para restaurarlo: POST /plans/:id/restore)'
+      : 'PUT /plans/:id   (200; 409 si está archivado; 422 si no pasa Joi)';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  let spins = [];
+  function renderSpins(list, readOnly = false) {
+    spins = list;
+    $('spin-count').textContent = spins.length;
+    $('spins').innerHTML = spins.map((s, i) => `
+      <div class="spin-row">
+        <span class="num">Tirada ${i + 1}</span>
+        <label>Sitio *<input value="${s.place}" placeholder="Cafetería de la EETAC" data-i="${i}" data-k="place" /></label>
+        <label>Min. a pie *<input type="number" min="0" max="120" value="${s.min}" data-i="${i}" data-k="min" /></label>
+        <label>Día y hora *<input type="datetime-local" value="${s.at}" data-i="${i}" data-k="at" /></label>
+        <label class="check"><input type="checkbox" ${s.accepted ? 'checked' : ''} data-accept="${i}" /> Aceptada</label>
+        <button type="button" class="danger" data-remove="${i}" ${spins.length === 1 || readOnly ? 'disabled' : ''} aria-label="Quitar la tirada ${i + 1}">Quitar</button>
+      </div>`).join('');
+    $('add-spin').disabled = readOnly || spins.length >= 3;
+    checkStatus();
+  }
+
+  function checkStatus() {
+    const missing = $('form-status').value === 'confirmed' && !spins.some((s) => s.accepted);
+    $('status-error').hidden = !missing;
+    $('save').disabled = missing || (editing && editing.deleted);
+  }
+
+  function ask(title, message, confirmText, action) {
+    $('modal-title').textContent = title;
+    $('modal-message').textContent = message;
+    $('modal-confirm').textContent = confirmText;
+    pending = action;
+    $('modal').classList.add('open');
+  }
+
+  // ---- Eventos ----
+  document.querySelectorAll('input[name="role"]').forEach((r) => r.addEventListener('change', () => document.body.classList.toggle('as-user', r.value === 'user' && r.checked)));
+  $('toggle-notes').addEventListener('change', (e) => document.body.classList.toggle('notes', e.target.checked));
+  $('search').addEventListener('input', (e) => { state.search = e.target.value; renderPlans(); });
+  $('status').addEventListener('change', (e) => { state.status = e.target.value; renderPlans(); });
+  document.querySelectorAll('[data-archived]').forEach((b) => b.addEventListener('click', () => {
+    state.archived = b.dataset.archived === 'true';
+    document.querySelectorAll('[data-archived]').forEach((x) => x.classList.toggle('active', x === b));
+    renderPlans();
+  }));
+  $('clear-date').addEventListener('click', () => { state.date = ''; renderPlans(); });
+  $('new-plan').addEventListener('click', () => openForm(null));
+  $('close-form').addEventListener('click', () => $('plan-form').classList.remove('open'));
+  $('cancel').addEventListener('click', () => $('plan-form').classList.remove('open'));
+  $('form-status').addEventListener('change', checkStatus);
+  $('add-spin').addEventListener('click', () => renderSpins([...spins, { place: '', min: '', at: '' }]));
+  $('save').addEventListener('click', () => { $('plan-form').classList.remove('open'); });
+  $('demo-409').addEventListener('click', () => {
+    $('form-error').textContent = editing ? 'El Plan está archivado: restáuralo antes de editarlo' : 'Este Date ya tiene un Plan';
+    $('form-error').hidden = false;
+  });
+
+  $('dates-body').addEventListener('click', (e) => {
+    const id = e.target.dataset.planOf;
+    if (!id) return;
+    state.date = id;
+    state.archived = plans.some((p) => p.date === id && p.deleted);
+    document.querySelectorAll('[data-archived]').forEach((x) => x.classList.toggle('active', (x.dataset.archived === 'true') === state.archived));
+    renderPlans();
+    $('plans').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  $('spins').addEventListener('input', (e) => { const { i, k } = e.target.dataset; if (k) spins[i][k] = e.target.value; });
+  $('spins').addEventListener('click', (e) => {
+    if (e.target.dataset.accept !== undefined) {
+      const i = Number(e.target.dataset.accept);
+      spins = spins.map((s, j) => ({ ...s, accepted: j === i ? e.target.checked : false }));
+      renderSpins(spins);
+    }
+    if (e.target.dataset.remove !== undefined) {
+      renderSpins(spins.filter((_, j) => j !== Number(e.target.dataset.remove)));
+    }
+  });
+
+  $('plans-body').addEventListener('click', (e) => {
+    const { edit, view, archive, restore } = e.target.dataset;
+    const del = e.target.dataset.delete;
+    const find = (id) => plans.find((p) => p.id === id);
+    if (edit) openForm(find(edit));
+    if (view) openForm(find(view), true);
+    if (archive) ask('Archivar Plan', `Se archiva el Plan de ${pairName(find(archive).date)}. Se puede restaurar.`, 'Archivar', () => { find(archive).deleted = true; });
+    if (restore) { find(restore).deleted = false; renderPlans(); }
+    if (del) ask('Eliminar Plan', `Se elimina para siempre el Plan de ${pairName(find(del).date)}. No se puede deshacer.`, 'Eliminar', () => { plans = plans.filter((p) => p.id !== del); });
+  });
+
+  $('modal-cancel').addEventListener('click', () => $('modal').classList.remove('open'));
+  $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') $('modal').classList.remove('open'); });
+  $('modal-confirm').addEventListener('click', () => { pending(); $('modal').classList.remove('open'); renderPlans(); });
+
+  renderDates();
+  renderPlans();
+  openForm(plans.find((p) => p.id === 'p1'));
+  window.scrollTo(0, 0);
+</script>
+</body>
+</html>

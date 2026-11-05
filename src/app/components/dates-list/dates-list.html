@@ -100,10 +100,16 @@
               }
             </td>
             <td class="actions">
-              <button type="button" class="secondary" [disabled]="date.extended" (click)="extend(date)">
+              <button
+                type="button"
+                class="secondary"
+                [disabled]="date.extended"
+                (click)="extend(date)"
+              >
                 Prórroga +24 h
               </button>
               @if (isAdmin()) {
+                <button type="button" class="secondary" (click)="showPlan(date)">Plan</button>
                 <button type="button" class="danger" (click)="askDelete(date)">Eliminar</button>
               }
             </td>
@@ -118,6 +124,12 @@
   </div>
 
   <app-pagination [page]="page()" [totalPages]="totalPages()" (pageChange)="loadPage($event)" />
+}
+
+<!-- Planes (Cambio de Aula): solo el admin. Para un user el componente ni se crea, y aunque
+     llamara a /plans la API le respondería 403 -->
+@if (isAdmin()) {
+  <app-plans-list [date]="planDate()" (dateCleared)="planDate.set(null)" />
 }
 
 <app-confirm-modal

@@ -35,3 +35,16 @@ export type {
   StudateDate,
 } from './date.model';
 export { DATE_STATUS_LABELS } from './date.model';
+export type {
+  CreatePlan,
+  Plan,
+  PlanDate,
+  PlanFilters,
+  PlanResponse,
+  PlansPage,
+  PlanStatus,
+  Spin,
+  SpinInput,
+  UpdatePlan,
+} from './plan.model';
+export { MAX_SPINS, PLAN_STATUS_LABELS, PLAN_STATUS_PILLS } from './plan.model';

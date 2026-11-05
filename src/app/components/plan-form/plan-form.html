@@ -1,0 +1,154 @@
+<div class="page-header">
+  <h2>{{ title() }}</h2>
+  <button type="button" class="secondary" (click)="closed.emit()">Cerrar</button>
+</div>
+
+<!-- El detalle: de quién es el Plan (populate del Date y sus usuarios) y sus fechas -->
+@if (plan(); as current) {
+  <div class="detail">
+    <div class="person">
+      @for (person of current.date.users; track person._id) {
+        <app-avatar [name]="person.name" [photo]="person.photo" />
+      }
+      <span class="who">
+        <strong>{{ coupleName(current.date.users) }}</strong>
+        <small>
+          Date {{ dateStatusLabels[current.date.status] | lowercase }} · caduca
+          {{ current.date.expiresAt | date: 'dd/MM HH:mm' }}
+        </small>
+      </span>
+    </div>
+    <span>Creado {{ current.createdAt | date: 'dd/MM HH:mm' }}</span>
+    @if (current.updatedAt) {
+      <span>Actualizado {{ current.updatedAt | date: 'dd/MM HH:mm' }}</span>
+    }
+    @if (current.deleted) {
+      <span class="pill off">archivado</span>
+    }
+  </div>
+}
+
+@if (readOnly()) {
+  <p class="hint">Un Plan archivado no se edita: restáuralo desde la lista para cambiarlo.</p>
+}
+
+@if (error()) {
+  <p class="alert">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="muted">Cargando...</p>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="fields">
+      <label>
+        Date *
+        <select formControlName="date">
+          @if (plan(); as current) {
+            <option [value]="current.date._id">{{ coupleName(current.date.users) }}</option>
+          } @else {
+            <option value="" disabled>Elige un Date</option>
+            @for (option of dates(); track option._id) {
+              <option [value]="option._id">
+                {{ coupleName(option.users) }} ({{ dateStatusLabels[option.status] }})
+              </option>
+            }
+          }
+        </select>
+        <span class="hint">
+          {{
+            plan()
+              ? 'El Date de un Plan no se cambia.'
+              : 'Solo Dates sin cerrar. Un Date tiene como mucho un Plan.'
+          }}
+        </span>
+      </label>
+
+      <label>
+        Estado *
+        <select formControlName="status">
+          @for (option of statuses; track option) {
+            <option [value]="option">{{ statusLabels[option] }}</option>
+          }
+        </select>
+        @if (form.hasError('confirmedWithoutAccepted')) {
+          <small class="field-error">Un Plan confirmado necesita una tirada aceptada</small>
+        }
+      </label>
+    </div>
+
+    <!-- Las tiradas: un FormArray de 1 a 3 grupos (sitio, minutos, día y hora, aceptada) -->
+    <fieldset formArrayName="spins">
+      <legend>Tiradas de la ruleta ({{ spins.length }}/{{ maxSpins }})</legend>
+
+      @for (spin of spins.controls; track spin; let i = $index) {
+        <div class="spin-row" [formGroupName]="i">
+          <span class="num">Tirada {{ i + 1 }}</span>
+          <label>
+            Sitio *
+            <input formControlName="place" placeholder="Cafetería de la EETAC" />
+            @if (spin.controls.place.invalid && spin.controls.place.touched) {
+              <small class="field-error">Escribe el sitio (máximo 100 caracteres)</small>
+            }
+          </label>
+          <label>
+            Min. a pie *
+            <input type="number" min="0" max="120" formControlName="walkingMinutes" />
+            @if (spin.controls.walkingMinutes.invalid && spin.controls.walkingMinutes.touched) {
+              <small class="field-error">Entero entre 0 y 120</small>
+            }
+          </label>
+          <label>
+            Día y hora *
+            <input type="datetime-local" formControlName="scheduledAt" />
+            @if (spin.controls.scheduledAt.invalid && spin.controls.scheduledAt.touched) {
+              <small class="field-error">Elige el día y la hora</small>
+            }
+          </label>
+          <label class="checkbox">
+            <input
+              type="checkbox"
+              formControlName="accepted"
+              (change)="onAccepted(i, $any($event.target).checked)"
+            />
+            Aceptada
+          </label>
+          <button
+            type="button"
+            class="danger"
+            [disabled]="spins.length === 1 || readOnly()"
+            [attr.aria-label]="'Quitar la tirada ' + (i + 1)"
+            (click)="removeSpin(i)"
+          >
+            Quitar
+          </button>
+        </div>
+      }
+
+      @if (!readOnly()) {
+        <div>
+          <button
+            type="button"
+            class="secondary"
+            [disabled]="spins.length >= maxSpins"
+            (click)="addSpin()"
+          >
+            + Añadir tirada
+          </button>
+          <span class="hint">
+            Como mucho {{ maxSpins }} tiradas y una sola aceptada (el sitio elegido).
+          </span>
+        </div>
+      }
+    </fieldset>
+
+    @if (!readOnly()) {
+      <div class="form-actions">
+        <button type="submit" [disabled]="form.invalid || saving()">
+          {{ saving() ? 'Guardando...' : 'Guardar' }}
+        </button>
+        <button type="button" class="secondary" (click)="closed.emit()">Cancelar</button>
+      </div>
+    }
+  </form>
+}

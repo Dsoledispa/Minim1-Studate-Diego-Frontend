@@ -1,0 +1,143 @@
+<div class="page-header">
+  <div>
+    <h2>{{ archived() ? 'Planes archivados' : 'Planes' }}</h2>
+    <p class="subtitle">Cambio de Aula: los sitios que la ruleta propone a cada Date</p>
+  </div>
+  <button type="button" (click)="openNew()">Nuevo Plan</button>
+</div>
+
+<!-- Los filtros se combinan en la misma petición: GET /plans?search=...&status=...&date=...&archived=... -->
+<div class="toolbar">
+  <input
+    class="search"
+    type="search"
+    placeholder="Buscar sitio (p. ej. cafetería)"
+    aria-label="Buscar sitio"
+    [(ngModel)]="search"
+    (ngModelChange)="loadPage(1)"
+  />
+
+  <select aria-label="Estado del Plan" [(ngModel)]="status" (ngModelChange)="loadPage(1)">
+    <option value="">Todos los estados</option>
+    @for (option of statuses; track option) {
+      <option [value]="option">{{ statusLabels[option] }}</option>
+    }
+  </select>
+
+  <div class="segmented" role="group" aria-label="Activos o archivados">
+    <button type="button" [class.active]="!archived()" (click)="setArchived(false)">Activos</button>
+    <button type="button" [class.active]="archived()" (click)="setArchived(true)">
+      Archivados
+    </button>
+  </div>
+
+  @if (date(); as filter) {
+    <span class="chip">
+      Date: {{ filter.name }}
+      <button type="button" aria-label="Quitar el filtro por Date" (click)="dateCleared.emit()">
+        &times;
+      </button>
+    </span>
+  }
+</div>
+
+@if (error()) {
+  <p class="alert">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="muted">Cargando...</p>
+} @else if (!error() || plans().length > 0) {
+  <p class="muted count">{{ total() }} {{ total() === 1 ? 'Plan' : 'Planes' }} · 10 por página</p>
+
+  <div class="table-wrap">
+    <table class="stack">
+      <thead>
+        <tr>
+          <th>Pareja</th>
+          <th>Estado</th>
+          <th>Tiradas de la ruleta</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (plan of plans(); track plan._id) {
+          <tr>
+            <!-- La pareja sale del populate: Plan -> Date -> usuarios -->
+            <td data-label="Pareja">
+              <div class="couple">
+                @for (person of plan.date.users; track person._id) {
+                  <div class="person">
+                    <app-avatar [name]="person.name" [photo]="person.photo" />
+                    <span class="who">{{ person.name }}</span>
+                  </div>
+                }
+              </div>
+            </td>
+            <td data-label="Estado">
+              <span class="pill {{ statusPills[plan.status] }}">{{
+                statusLabels[plan.status]
+              }}</span>
+            </td>
+            <td data-label="Tiradas">
+              <ul class="spins">
+                @for (spin of plan.spins; track spin._id) {
+                  <li [class.accepted]="spin.accepted">
+                    <span class="place">{{ spin.place }}</span>
+                    <span class="meta">
+                      {{ spin.walkingMinutes }} min a pie ·
+                      {{ spin.scheduledAt | date: 'dd/MM HH:mm' }}
+                    </span>
+                    @if (spin.accepted) {
+                      <span class="pill ok">aceptada</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </td>
+            <td data-label="Date">
+              <span class="muted">{{ dateStatusLabels[plan.date.status] }}</span>
+            </td>
+            <td class="actions">
+              @if (plan.deleted) {
+                <button type="button" class="secondary" (click)="openPlan(plan)">Ver</button>
+                <button type="button" class="secondary" (click)="restore(plan)">Restaurar</button>
+                <button type="button" class="danger" (click)="askDelete(plan)">Eliminar</button>
+              } @else {
+                <button type="button" class="secondary" (click)="openPlan(plan)">Editar</button>
+                <button type="button" class="danger" (click)="askArchive(plan)">Archivar</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td class="empty" colspan="5">{{ emptyText() }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-pagination [page]="page()" [totalPages]="totalPages()" (pageChange)="loadPage($event)" />
+}
+
+<!-- El formulario y detalle, debajo de la lista: crear (planId null), editar o ver un archivado -->
+@if (form(); as open) {
+  <app-plan-form
+    [planId]="open.planId"
+    [dateId]="date()?.id ?? ''"
+    (saved)="onSaved()"
+    (closed)="closeForm()"
+  />
+}
+
+<!-- El mismo modal para archivar y para eliminar para siempre -->
+<app-confirm-modal
+  [open]="pending() !== null"
+  [title]="modalTitle()"
+  [message]="modalMessage()"
+  [confirmText]="modalConfirmText()"
+  (confirmed)="confirmAction()"
+  (cancelled)="cancelAction()"
+/>
