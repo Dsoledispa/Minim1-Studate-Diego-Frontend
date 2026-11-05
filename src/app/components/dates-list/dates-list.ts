@@ -69,6 +69,9 @@ export class DatesList implements OnInit {
   // La sección de Planes, para bajar hasta ella al pulsar "Plan"
   private plansSection = viewChild(PlansList, { read: ElementRef });
 
+  // La lista de Planes, para recargarla cuando se elimina un Date (la API borra su Plan en cascada)
+  private plansList = viewChild(PlansList);
+
   deleteMessage = computed(() => {
     const date = this.dateToDelete();
     return date ? `Se borra el Date entre ${date.users.map((user) => user.name).join(' y ')}.` : '';
@@ -162,16 +165,28 @@ export class DatesList implements OnInit {
     }
 
     this.dateToDelete.set(null);
-    this.run(this.dateService.deleteDate(date._id));
+    this.run(this.dateService.deleteDate(date._id), () => this.afterDateDeleted(date));
   }
 
-  // Después de cualquier cambio se recarga la página (un Date que cambia de bandeja sale de la pestaña)
-  private run(request: Observable<unknown>): void {
+  // Si la lista de Planes estaba filtrada por ese Date, se quita el filtro (eso ya la recarga);
+  // si no, se recarga igualmente para que su Plan desaparezca
+  private afterDateDeleted(date: StudateDate): void {
+    if (this.planDate()?.id === date._id) {
+      this.planDate.set(null);
+    } else {
+      this.plansList()?.loadPage(1);
+    }
+  }
+
+  // Después de cualquier cambio se recarga la página (un Date que cambia de bandeja sale de la pestaña).
+  // done: lo que hay que hacer además cuando la petición va bien
+  private run(request: Observable<unknown>, done?: () => void): void {
     this.error.set('');
     request.subscribe({
       next: () => {
         const isLastOnPage = this.dates().length === 1 && this.page() > 1;
         this.loadPage(isLastOnPage ? this.page() - 1 : this.page());
+        done?.();
       },
       // Con un 409 la API dice que la prórroga ya se ha usado
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),

@@ -90,6 +90,34 @@ describe('DatesList', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Date: Usuario y Oriol Costa');
   });
 
+  it('reloads the plans list without the filter when the filtered Date is deleted', async () => {
+    await setup('admin');
+    component.showPlan(date);
+    fixture.detectChanges();
+    httpMock.expectOne(`${plansUrl}?page=1&limit=10&date=d1`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+
+    component.askDelete(date);
+    component.confirmDelete();
+    httpMock.expectOne(`${datesUrl}/d1`).flush(null);
+    httpMock.expectOne(`${datesUrl}?page=1&limit=10&status=pending`).flush({ dates: [], total: 0, page: 1, pages: 0 });
+    fixture.detectChanges();
+
+    // La API ha borrado también su Plan: la lista de Planes se pide otra vez, ya sin el Date
+    httpMock.expectOne(`${plansUrl}?page=1&limit=10`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+    expect(component.planDate()).toBeNull();
+  });
+
+  it('reloads the plans list when another Date is deleted', async () => {
+    await setup('admin');
+
+    component.askDelete(date);
+    component.confirmDelete();
+    httpMock.expectOne(`${datesUrl}/d1`).flush(null);
+    httpMock.expectOne(`${datesUrl}?page=1&limit=10&status=pending`).flush({ dates: [], total: 0, page: 1, pages: 0 });
+
+    httpMock.expectOne(`${plansUrl}?page=1&limit=10`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+  });
+
   it('changes tab and asks for that status from the first page', async () => {
     await setup('user');
     component.selectTab('');
