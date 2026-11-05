@@ -36,7 +36,10 @@ describe('DatesList', () => {
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
-    const me = role === 'admin' ? { _id: 'u1', name: 'Admin', email: 'admin@example.com', role } : { ...usuario, role };
+    const me =
+      role === 'admin'
+        ? { _id: 'u1', name: 'Admin', email: 'admin@example.com', role }
+        : { ...usuario, role };
     TestBed.inject(AuthService).login({ email: me.email, password: 'studate26' }).subscribe();
     httpMock.expectOne(`${environment.apiUrl}/auth/login`).flush({ token: 't', user: me });
 
@@ -45,11 +48,17 @@ describe('DatesList', () => {
     fixture.detectChanges();
 
     // Se entra en la bandeja de Pendientes
-    httpMock.expectOne(`${datesUrl}?page=1&limit=10&status=pending`).flush({ dates: [date], total: 1, page: 1, pages: 1 });
+    httpMock
+      .expectOne(`${datesUrl}?page=1&limit=10&status=pending`)
+      .flush({ dates: [date], total: 1, page: 1, pages: 1 });
     if (role === 'admin') {
-      httpMock.expectOne((request) => request.url === `${environment.apiUrl}/users`).flush({ users: [], total: 0, page: 1, pages: 0 });
+      httpMock
+        .expectOne((request) => request.url === `${environment.apiUrl}/users`)
+        .flush({ users: [], total: 0, page: 1, pages: 0 });
       // El admin ve además la lista de Planes, que pide su primera página
-      httpMock.expectOne(`${plansUrl}?page=1&limit=10`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+      httpMock
+        .expectOne(`${plansUrl}?page=1&limit=10`)
+        .flush({ plans: [], total: 0, page: 1, pages: 0 });
     }
     await fixture.whenStable();
     fixture.detectChanges();
@@ -85,25 +94,35 @@ describe('DatesList', () => {
     component.showPlan(date);
     fixture.detectChanges();
 
-    httpMock.expectOne(`${plansUrl}?page=1&limit=10&date=d1`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+    httpMock
+      .expectOne(`${plansUrl}?page=1&limit=10&date=d1`)
+      .flush({ plans: [], total: 0, page: 1, pages: 0 });
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Date: Usuario y Oriol Costa');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Date: Usuario y Oriol Costa',
+    );
   });
 
   it('reloads the plans list without the filter when the filtered Date is deleted', async () => {
     await setup('admin');
     component.showPlan(date);
     fixture.detectChanges();
-    httpMock.expectOne(`${plansUrl}?page=1&limit=10&date=d1`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+    httpMock
+      .expectOne(`${plansUrl}?page=1&limit=10&date=d1`)
+      .flush({ plans: [], total: 0, page: 1, pages: 0 });
 
     component.askDelete(date);
     component.confirmDelete();
     httpMock.expectOne(`${datesUrl}/d1`).flush(null);
-    httpMock.expectOne(`${datesUrl}?page=1&limit=10&status=pending`).flush({ dates: [], total: 0, page: 1, pages: 0 });
+    httpMock
+      .expectOne(`${datesUrl}?page=1&limit=10&status=pending`)
+      .flush({ dates: [], total: 0, page: 1, pages: 0 });
     fixture.detectChanges();
 
     // La API ha borrado también su Plan: la lista de Planes se pide otra vez, ya sin el Date
-    httpMock.expectOne(`${plansUrl}?page=1&limit=10`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+    httpMock
+      .expectOne(`${plansUrl}?page=1&limit=10`)
+      .flush({ plans: [], total: 0, page: 1, pages: 0 });
     expect(component.planDate()).toBeNull();
   });
 
@@ -113,16 +132,22 @@ describe('DatesList', () => {
     component.askDelete(date);
     component.confirmDelete();
     httpMock.expectOne(`${datesUrl}/d1`).flush(null);
-    httpMock.expectOne(`${datesUrl}?page=1&limit=10&status=pending`).flush({ dates: [], total: 0, page: 1, pages: 0 });
+    httpMock
+      .expectOne(`${datesUrl}?page=1&limit=10&status=pending`)
+      .flush({ dates: [], total: 0, page: 1, pages: 0 });
 
-    httpMock.expectOne(`${plansUrl}?page=1&limit=10`).flush({ plans: [], total: 0, page: 1, pages: 0 });
+    httpMock
+      .expectOne(`${plansUrl}?page=1&limit=10`)
+      .flush({ plans: [], total: 0, page: 1, pages: 0 });
   });
 
   it('changes tab and asks for that status from the first page', async () => {
     await setup('user');
     component.selectTab('');
 
-    httpMock.expectOne(`${datesUrl}?page=1&limit=10`).flush({ dates: [], total: 0, page: 1, pages: 0 });
+    httpMock
+      .expectOne(`${datesUrl}?page=1&limit=10`)
+      .flush({ dates: [], total: 0, page: 1, pages: 0 });
     expect(component.status()).toBe('');
   });
 
@@ -132,7 +157,10 @@ describe('DatesList', () => {
 
     httpMock
       .expectOne(`${datesUrl}/d1/extend`)
-      .flush({ message: 'La prórroga de este Date ya se ha usado' }, { status: 409, statusText: 'Conflict' });
+      .flush(
+        { message: 'La prórroga de este Date ya se ha usado' },
+        { status: 409, statusText: 'Conflict' },
+      );
     expect(component.error()).toBe('La prórroga de este Date ya se ha usado');
   });
 });

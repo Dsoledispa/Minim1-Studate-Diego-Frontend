@@ -100,7 +100,12 @@
               }
             </td>
             <td class="actions">
-              <button type="button" class="secondary" [disabled]="date.extended" (click)="extend(date)">
+              <button
+                type="button"
+                class="secondary"
+                [disabled]="date.extended"
+                (click)="extend(date)"
+              >
                 Prórroga +24 h
               </button>
               @if (isAdmin()) {
