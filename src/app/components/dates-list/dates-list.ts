@@ -6,7 +6,14 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Observable, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
 
-import { DATE_STATUS_LABELS, DateFilters, DateStatus, GradeUser, StudateDate, User } from '../../models';
+import {
+  DATE_STATUS_LABELS,
+  DateFilters,
+  DateStatus,
+  GradeUser,
+  StudateDate,
+  User,
+} from '../../models';
 import { AuthService } from '../../services/auth.service';
 import { DateService } from '../../services/date.service';
 import { UserService } from '../../services/user.service';
@@ -83,19 +90,21 @@ export class DatesList implements OnInit {
         switchMap((page) => {
           this.loading.set(true);
           this.error.set('');
-          return this.dateService.getDates(page, PAGE_SIZE, { status: this.status(), user: this.user() }).pipe(
-            tap((response) => {
-              this.dates.set(response.dates);
-              this.total.set(response.total);
-              this.totalPages.set(Math.max(response.pages, 1));
-              this.page.set(response.page);
-            }),
-            catchError((err: HttpErrorResponse) => {
-              this.error.set(apiErrorMessage(err));
-              return EMPTY;
-            }),
-            finalize(() => this.loading.set(false)),
-          );
+          return this.dateService
+            .getDates(page, PAGE_SIZE, { status: this.status(), user: this.user() })
+            .pipe(
+              tap((response) => {
+                this.dates.set(response.dates);
+                this.total.set(response.total);
+                this.totalPages.set(Math.max(response.pages, 1));
+                this.page.set(response.page);
+              }),
+              catchError((err: HttpErrorResponse) => {
+                this.error.set(apiErrorMessage(err));
+                return EMPTY;
+              }),
+              finalize(() => this.loading.set(false)),
+            );
         }),
         takeUntilDestroyed(),
       )
